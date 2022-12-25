@@ -162,24 +162,57 @@ TEST_F(DoDelete, SuccessCase) {
 }
 
 
-namespace DoCGI{
- class DoCGI : public ::testing::Test {
-  protected:
-   static void SetUpTestCase() {
-     // First function only
-     chdir("../.."); // Go to the project root directory
-   }
+namespace DoCGI {
+class DoCGI : public ::testing::Test {
+ protected:
+  static void SetUpTestCase() {
+    // First function only
+    chdir("../.."); // Go to the project root directory
+  }
 
-   void SetUp() override {}
- };
+  void SetUp() override {}
+};
 
 TEST_F(DoCGI, Case1) {
   ft::ServerChild server_child;
+  std::string file_path_ = "var/www/inception_server/cgi-bin/check-cgi-environ.py";
   std::string query_string_;
 
   std::string response_message_str;
 
-  do_CGI(response_message_str, server_child, std::string(), query_string_);
+  char cwd[1024];
+  getcwd(cwd, sizeof(cwd));
+  std::cout << cwd << std::endl;
+
+  do_CGI(response_message_str, server_child, file_path_, query_string_);
+
+  std::cout << response_message_str << std::endl;
+}
+
+TEST_F(DoCGI, FileNotFoundCase1) {
+  ft::ServerChild server_child;
+  std::string file_path_ = "var/www/inception_server/cgi-bin/notFound.py";
+  std::string query_string_;
+
+  std::string response_message_str;
+
+  char cwd[1024];
+  getcwd(cwd, sizeof(cwd));
+  std::cout << cwd << std::endl;
+
+  do_CGI(response_message_str, server_child, file_path_, query_string_);
+
+  std::cout << response_message_str << std::endl;
+}
+
+TEST_F(DoCGI, ErrorCase1) {
+  ft::ServerChild server_child;
+  std::string file_path_ = "var/www/inception_server/cgi-bin/misbehave.py";
+  std::string query_string_;
+
+  std::string response_message_str;
+
+  do_CGI(response_message_str, server_child, file_path_, query_string_);
 
   std::cout << response_message_str << std::endl;
 }

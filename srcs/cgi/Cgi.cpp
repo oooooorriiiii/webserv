@@ -119,8 +119,7 @@ void Cgi::Execute() {
 
   ret_val = socketpair(AF_UNIX, SOCK_STREAM, 0, socket_fds);
   if (ret_val == -1) {
-    std::cerr << "socket error" << std::endl;
-    return;
+    throw std::runtime_error("CGI socket error");
   }
 
   int parent_socket = socket_fds[0];
@@ -128,11 +127,9 @@ void Cgi::Execute() {
 
   pid_t pid = fork();
   if (pid < 0) { // fork error
-    // TODO: error 500
-    std::cerr << "fork failed" << std::endl;
     close(parent_socket);
     close(child_socket);
-    return;
+    throw std::runtime_error("CGI fork error");
   }
   if (pid == 0) { // child
     int ret_val_child = 1;
@@ -203,17 +200,19 @@ void Cgi::Execute() {
   int status;
   waitpid(pid, &status, 0);
 
-  // TODO: delete (This is debug)
   if (WEXITSTATUS(status) != 0) {
     std::cerr << "The child process exited with an error" << std::endl;
-  } else {
+    close(child_socket);
+    throw std::runtime_error("CGI process failed");
+  }
+// if to output log
+  else
+  {
     std::cerr << "The child process exited successfully" << std::endl;
   }
 
   close(child_socket);
 }
-
-//TODO: void  Cgi::MakeDocumentResponse
 
 /*
  * Getter
