@@ -114,9 +114,7 @@ namespace ft
 	}
 
 	Socket::RecievedMsg Socket::recieve_msg()
-	{	
-		struct pollfd client;	
-
+	{
 		std::cout << "poll_fd_vec_.size(): " << poll_fd_vec_.size() << std::endl;
 		for (size_t i = 0; i < poll_fd_vec_.size(); ++i) {
 			std::cout << poll_fd_vec_[i].fd << " e" << poll_fd_vec_[i].events << " re" << poll_fd_vec_[i].revents;
@@ -130,7 +128,7 @@ namespace ft
 
 		for (size_t i = 0; poll_rslt > 0 && i < poll_fd_vec_.size(); ++i)
 		{
-			client = poll_fd_vec_[i];
+			struct pollfd& client = poll_fd_vec_[i];
 			if ((client.revents & POLLERR) == POLLERR)
 			{
 				std::cerr << "POLLERR: " << client.fd << std::endl;	
