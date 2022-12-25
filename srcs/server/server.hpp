@@ -20,6 +20,7 @@
 #include "../config/ConfigParser.hpp"
 #include "../HTTP/HTTPHead.hpp"
 #include "serverChild.hpp"
+#include "../httpResponse/HttpResponse.hpp"
 
 namespace ft
 {
@@ -47,6 +48,7 @@ namespace ft
 		ServerChildMap			serverChild_map_;
 		DefaultServerChildMap	default_serverChild_map_;
 		std::map<int, HTTPRequestPair>	httpRequest_pair_map_;
+		HttpResponse	http_response_;
 
 		void create_serverChild_map_();
 		void import_config_(const std::string config_path);

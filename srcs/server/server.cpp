@@ -4,7 +4,8 @@
 namespace ft
 {
 	Server::Server(const std::string config_path) : server_config_(), socket_(),
-		serverChild_map_(), default_serverChild_map_(), httpRequest_pair_map_()
+		serverChild_map_(), default_serverChild_map_(), httpRequest_pair_map_(),
+		http_response_()
 	{
 		import_config_(config_path);
 		socket_.setup(server_config_);
@@ -46,6 +47,8 @@ namespace ft
 	bool Server::recieve_request_()
 	{
 		Socket::RecievedMsg recieved_msg;
+		unsigned int		response_code;
+		std::string			response;
 
 		try
 		{	
@@ -63,7 +66,11 @@ namespace ft
 				std::cout << "BODY RECEIVED: ";
 				std::cout << serverChild.Get_body() << std::endl;
 
-                std::string response = http_process(serverChild);
+				response_code = serverChild.Get_response_code();
+				if (response_code >= 300)
+					response = http_response_.GetResponseMessage(response_code);
+				else
+                	response = http_process(serverChild);
                 std::cout << response << std::endl; // Debug
                 socket_.send_msg(recieved_msg.client_id, response);
 
