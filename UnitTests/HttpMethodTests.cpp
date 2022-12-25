@@ -163,6 +163,7 @@ TEST_F(DoDelete, SuccessCase) {
 
 
 namespace DoCGI {
+// ServerConfigがセットできないので，テストは失敗します．
 class DoCGI : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
