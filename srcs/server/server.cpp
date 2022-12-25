@@ -75,7 +75,7 @@ namespace ft
                 std::cout << "RESPONSE: \n" << response << std::endl; // Debug
 
                 socket_.send_msg(recieved_msg.client_id, response_code, response);
-				httpRequest_pair_map_.erase(recieved_msg.client_id);	
+				httpRequest_pair_map_.erase(recieved_msg.client_id);
 			}
 
 			return (true);

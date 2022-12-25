@@ -115,6 +115,8 @@ namespace ft
 
 	Socket::RecievedMsg Socket::recieve_msg()
 	{	
+		struct pollfd client;	
+
 		std::cout << "poll_fd_vec_.size(): " << poll_fd_vec_.size() << std::endl;
 		for (size_t i = 0; i < poll_fd_vec_.size(); ++i) {
 			std::cout << poll_fd_vec_[i].fd << " e" << poll_fd_vec_[i].events << " re" << poll_fd_vec_[i].revents;
@@ -128,44 +130,46 @@ namespace ft
 
 		for (size_t i = 0; poll_rslt > 0 && i < poll_fd_vec_.size(); ++i)
 		{
-			if ((poll_fd_vec_[i].revents & POLLERR) == POLLERR)
+			client = poll_fd_vec_[i];
+			if ((client.revents & POLLERR) == POLLERR)
 			{
-				std::cerr << "POLLERR: " << poll_fd_vec_[i].fd << std::endl;	
-				close_fd_(poll_fd_vec_[i].fd, i);
-				throw connectionHangUp(poll_fd_vec_[i].fd);
+				std::cerr << "POLLERR: " << client.fd << std::endl;	
+				close_fd_(client.fd, i);
+				throw connectionHangUp(client.fd);
 			}
-			else if ((poll_fd_vec_[i].revents & POLLHUP) == POLLHUP)
+			else if ((client.revents & POLLHUP) == POLLHUP)
 			{
-				std::cerr << "POLLHUP: " << poll_fd_vec_[i].fd << std::endl;
-				close_fd_(poll_fd_vec_[i].fd, i);
-				throw connectionHangUp(poll_fd_vec_[i].fd);
+				std::cerr << "POLLHUP: " << client.fd << std::endl;
+				close_fd_(client.fd, i);
+				throw connectionHangUp(client.fd);
 			}
-			else if ((poll_fd_vec_[i].revents & POLLRDHUP) == POLLRDHUP)
+			else if ((client.revents & POLLRDHUP) == POLLRDHUP)
 			{
-				std::cerr << "POLLRDHUP: " << poll_fd_vec_[i].fd << std::endl;
-				close_fd_(poll_fd_vec_[i].fd, i);	
-				throw connectionHangUp(poll_fd_vec_[i].fd);
+				std::cerr << "POLLRDHUP: " << client.fd << std::endl;
+				close_fd_(client.fd, i);	
+				throw connectionHangUp(client.fd);
 			}
-			else if ((poll_fd_vec_[i].revents & POLLIN) == POLLIN)
+			else if ((client.revents & POLLIN) == POLLIN)
 			{
-				poll_fd_vec_[i].revents = 0;
-				if (used_fd_set_.count(poll_fd_vec_[i].fd))
+				client.revents = 0;
+				if (used_fd_set_.count(client.fd))
 				{
-					poll_fd_vec_[i].revents = 0;
-					return (recieve_msg_from_connected_client_(poll_fd_vec_[i].fd, i));
+					client.revents = 0;
+					return (recieve_msg_from_connected_client_(client.fd, i));
 				}
 				else
 				{
-					register_new_client_(poll_fd_vec_[i].fd);
+					register_new_client_(client.fd);
 					throw recieveMsgFromNewClient(*(--used_fd_set_.end()));
 				}
 			}
-			else if ((poll_fd_vec_[i].revents & POLLOUT) == POLLOUT)
+			else if ((client.revents & POLLOUT) == POLLOUT)
 			{
-				poll_fd_vec_[i].revents = 0;
-				std::pair<unsigned int, std::string>& message = msg_to_send_map_[poll_fd_vec_[i].fd];
-				std::string &msg_to_send = message.second;
-				ssize_t sent_num = send(poll_fd_vec_[i].fd, msg_to_send.c_str(),
+				client.revents = 0;
+				unsigned int	response_code = msg_to_send_map_[client.fd].first;
+				std::string&	msg_to_send = msg_to_send_map_[client.fd].second;
+
+				ssize_t sent_num = send(client.fd, msg_to_send.c_str(),
 									   msg_to_send.size(), 0);
 				if (sent_num == -1)
 					throw SetUpFailException("send() system error");
@@ -173,14 +177,14 @@ namespace ft
 				if (static_cast<size_t>(sent_num) != msg_to_send.size())
 					msg_to_send.erase(0, sent_num);
 				else {
-					msg_to_send_map_.erase(poll_fd_vec_[i].fd);
-					if (message.first >= 400) {
-						close_fd_(poll_fd_vec_[i].fd, i);
-						throw connectionHangUp(poll_fd_vec_[i].fd);
+					msg_to_send_map_.erase(client.fd);
+					if (response_code >= 400) {
+						close_fd_(client.fd, i);
+						throw connectionHangUp(client.fd);
 					}
-					poll_fd_vec_[i].events = POLLIN;
+					client.events = POLLIN;
 				}
-				last_recieve_time_map_[poll_fd_vec_[i].fd] = time(NULL);
+				last_recieve_time_map_[client.fd] = time(NULL);
 			}
 		}
 		// throw recieveMsgException();	// pollにタイムアウトを設定するので除外
