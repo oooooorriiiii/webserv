@@ -32,6 +32,8 @@ namespace ft
 	class Socket
 	{
 	public:
+
+		typedef std::map<int, std::pair<unsigned int, std::string> >	message_map;
 		// canonical
 		Socket();
 		virtual ~Socket();
@@ -42,17 +44,16 @@ namespace ft
 			RecievedMsg();
 			RecievedMsg(const RecievedMsg& src);
 			RecievedMsg operator=(const RecievedMsg &other);
-			RecievedMsg(const std::string content, const int client_id, in_port_t port, size_t i_poll_fd);
+			RecievedMsg(const std::string content, const int client_id, in_port_t port);
 			~RecievedMsg();
 			std::string content;
 			int client_id;
 			in_port_t port;
-			size_t i_poll_fd;
 		};
 
 		void setup(const std::vector<ServerConfig> &server_config);
 		RecievedMsg recieve_msg();
-		void send_msg(int fd, const std::string msg);
+		void send_msg(int fd, unsigned int response_code, const std::string msg);
 		std::vector<int>& check_keep_time_and_close_fd();
 		void close_fd_(const int fd, const int i_poll_fd);
 
@@ -97,7 +98,7 @@ namespace ft
 		std::vector<int> closedfd_vec_;
 		std::vector<struct pollfd> poll_fd_vec_;
 		std::map<int, time_t> last_recieve_time_map_; // sockfd => -1
-		std::map<int, std::string> msg_to_send_map_;
+		message_map		msg_to_send_map_;
 		std::map<int, in_port_t> fd_to_port_map_;
 
 		std::set<int> used_fd_set_;

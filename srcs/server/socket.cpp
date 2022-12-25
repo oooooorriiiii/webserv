@@ -34,17 +34,17 @@ namespace ft
 	}
 
 	Socket::RecievedMsg::RecievedMsg()
-		: content(""), client_id(0), port(0), i_poll_fd(0)
+		: content(""), client_id(0), port(0)
 	{
 	}
 
 	Socket::RecievedMsg::RecievedMsg(const RecievedMsg& src)
-		: content(src.content), client_id(src.client_id), port(src.port), i_poll_fd(src.i_poll_fd)
+		: content(src.content), client_id(src.client_id), port(src.port)
 	{
 	}
 
-	Socket::RecievedMsg::RecievedMsg(const std::string content, const int client_id, in_port_t port, size_t i_poll_fd)
-		: content(content), client_id(client_id), port(port), i_poll_fd(i_poll_fd)
+	Socket::RecievedMsg::RecievedMsg(const std::string content, const int client_id, in_port_t port)
+		: content(content), client_id(client_id), port(port)
 	{
 	}
 
@@ -56,7 +56,6 @@ namespace ft
 		content = other.content;
 		client_id = other.client_id;
 		port = other.port;
-		i_poll_fd = other.i_poll_fd;
 		return (*this);
 	}
 	
@@ -164,15 +163,21 @@ namespace ft
 			else if ((poll_fd_vec_[i].revents & POLLOUT) == POLLOUT)
 			{
 				poll_fd_vec_[i].revents = 0;
-				std::string &msg_to_send = msg_to_send_map_[poll_fd_vec_[i].fd];
+				std::pair<unsigned int, std::string>& message = msg_to_send_map_[poll_fd_vec_[i].fd];
+				std::string &msg_to_send = message.second;
 				ssize_t sent_num = send(poll_fd_vec_[i].fd, msg_to_send.c_str(),
 									   msg_to_send.size(), 0);
 				if (sent_num == -1)
 					throw SetUpFailException("send() system error");
+
 				if (static_cast<size_t>(sent_num) != msg_to_send.size())
 					msg_to_send.erase(0, sent_num);
 				else {
 					msg_to_send_map_.erase(poll_fd_vec_[i].fd);
+					if (message.first >= 400) {
+						close_fd_(poll_fd_vec_[i].fd, i);
+						throw connectionHangUp(poll_fd_vec_[i].fd);
+					}
 					poll_fd_vec_[i].events = POLLIN;
 				}
 				last_recieve_time_map_[poll_fd_vec_[i].fd] = time(NULL);
@@ -182,9 +187,13 @@ namespace ft
 		throw NoRecieveMsg();	
 	}
 
-	void Socket::send_msg(int fd, const std::string msg)
+	void Socket::send_msg(int fd, unsigned int response_code, const std::string msg)
 	{
-		msg_to_send_map_[fd].append(msg);	
+		std::pair<unsigned int, std::string>& message = msg_to_send_map_[fd];
+		if (message.first != response_code)
+			message.first = response_code;
+		message.second.append(msg);
+
 		size_t index = 0;
 		for (; index < poll_fd_vec_.size() && poll_fd_vec_[index].fd != fd; ++index) { ; }
 
@@ -248,7 +257,7 @@ namespace ft
 		}
 
 		buf[recv_ret] = '\0';
-		return (RecievedMsg(std::string(buf), connection, fd_to_port_map_[connection], i_poll_fd));
+		return (RecievedMsg(std::string(buf), connection, fd_to_port_map_[connection]));
 	}
 
 	void Socket::close_fd_(const int fd, const int i_poll_fd)

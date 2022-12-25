@@ -71,17 +71,11 @@ namespace ft
 					response = http_response_.GetResponseMessage(response_code);
 				else
                 	response = http_process(serverChild);
-                std::cout << response << std::endl; // Debug
-                socket_.send_msg(recieved_msg.client_id, response);
 
-				//socket_.send_msg(recieved_msg.client_id, "HTTP/1.1 200 OK\nContent-Length: 12\nContent-Type: text/html\n\nHello World\n");		
+                std::cout << "RESPONSE: \n" << response << std::endl; // Debug
 
-				httpRequest_pair_map_.erase(recieved_msg.client_id);
-
-				if (serverChild.Get_response_code() >= 400) { /* what to do for 100 - 299? */
-					std::cout << "socket.close_fd_ due to response code != 200" << std::endl;
-					socket_.close_fd_(recieved_msg.client_id, recieved_msg.i_poll_fd);	
-				}
+                socket_.send_msg(recieved_msg.client_id, response_code, response);
+				httpRequest_pair_map_.erase(recieved_msg.client_id);	
 			}
 
 			return (true);
