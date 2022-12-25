@@ -106,6 +106,7 @@ namespace ft
 		setUp_locationConfig_();
 
 		// return in case of redirect
+		/* check nginx NOOOO /redirect  HTTP/1.1 */
 		if (parse_status_ == complete) {
 			return ;
 		}
@@ -199,7 +200,11 @@ namespace ft
 		std::set<std::string> valid_methods = location_config_.getAllowMethod();
 		std::set<std::string>::iterator end = valid_methods.end();
 
-		if (std::find(valid_methods.begin(), end, HTTP_head_.GetRequestMethod()) == end) {
+		std::cout << "REQUEST METHOD: " << HTTP_head_.GetRequestMethod() << std::endl << " ALLOWED METHODS: ";
+		for (std::set<std::string>::iterator it = valid_methods.begin(); it != end; ++it)
+			std::cout << *it << " " << std::endl;
+		std::cout << std::endl;
+		if (valid_methods.find(HTTP_head_.GetRequestMethod()) == end) {
             throw_(501, "Not Implemented - invalid request method");
         }
 	}
