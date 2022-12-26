@@ -562,5 +562,8 @@ std::pair<int, std::string> ConfigParser::validateRedirect(const std::vector<std
 	{
 		throwIncorrectFormatError(line, "return");
 	}
-	return (std::make_pair(validateInt(line[1], "return"), line[2]));
+	int status_code = validateInt(line[1], "return");
+	if (status_code != 301)
+		throw std::invalid_argument("Error: redirect other than 301 not allowed");
+	return (std::make_pair(status_code, line[2]));
 }
