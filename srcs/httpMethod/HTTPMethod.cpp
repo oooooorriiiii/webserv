@@ -262,7 +262,14 @@ int do_CGI(std::string &response_message_str,
    * Execute CGI
    */
   Cgi cgi(server_child, file_path, script_name, query_string);
-  cgi.Execute();
+  try {
+    cgi.Execute();
+  } catch (std::exception &e) {
+    // status 500
+    response_message_stream << CreateErrorSentence(500);
+    response_message_str = response_message_stream.str();
+    return (500);
+  }
   int cgi_out_stream = cgi.GetCgiSocket();
 
   /*
