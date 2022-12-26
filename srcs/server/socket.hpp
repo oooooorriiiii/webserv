@@ -23,6 +23,7 @@
 #include <fcntl.h>
 
 #include "../config/Config.hpp"
+#include "../utils/utils.hpp"
 
 #define BUFFER_SIZE 10
 
@@ -79,10 +80,17 @@ namespace ft
 			const int client_id;
 		};
 
-		class connectionHangUp : public std::exception
+		class closedConnection : public std::exception
 		{
 		public:
-			connectionHangUp(const int client_id);
+			closedConnection(const int client_id);
+			const int client_id;
+		};
+
+		class serverInternalError : public std::exception
+		{
+		public:
+			serverInternalError(const int client_id);
 			const int client_id;
 		};
 
@@ -111,6 +119,7 @@ namespace ft
 		void closeAllSocket_();
 		void set_sockaddr_(struct sockaddr_in &server_sockaddr, const char *ip, const in_port_t port);
 		void set_nonblock_(int fd);
+		void print_event_debug();
 	};
 
 }

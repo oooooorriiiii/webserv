@@ -19,6 +19,13 @@ namespace ft {
     void                    TrimWSP(std::string& str);
    	unsigned int	        StrBase_to_UI_(const std::string& str, std::ios_base& (*base)(std::ios_base&));
    	int	                    StrBase_to_I_(const std::string& str, std::ios_base& (*base)(std::ios_base&));
+
+    template <typename T>
+    bool    vecIncludes(const std::vector<T>& vec, T item) {
+        typename std::vector<T>::const_iterator it = vec.begin();
+        for (; it != vec.end() && *it != item; ++it) {;}
+        return (it == vec.end() ? false : true);
+    }
 }
 
 #endif

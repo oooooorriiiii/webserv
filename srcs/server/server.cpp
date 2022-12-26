@@ -84,7 +84,7 @@ namespace ft
 		{
 			httpRequest_pair_map_[new_client.client_id];
 		}
-		catch (const ft::Socket::connectionHangUp &deleted_client)
+		catch (const ft::Socket::closedConnection &deleted_client)
 		{
 			httpRequest_pair_map_.erase(deleted_client.client_id);
 		}
@@ -92,9 +92,9 @@ namespace ft
 		{
 			std::cerr << "no msg recieved" << std::endl;
 		}
-		catch (const std::exception &e)
+		catch (const ft::Socket::serverInternalError &client_id)
 		{
-			throw std::runtime_error(e.what());
+            socket_.send_msg(client_id.client_id, 500, http_response_.GetResponseMessage(500));
 		}
 
 		return (false);

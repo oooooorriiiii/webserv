@@ -142,7 +142,7 @@ std::string HttpResponse::GetResponseMessage(int status_code) {
 #define HTTP_SSL 1
   unsigned int http_port = 80;
   bool chunked = true;
-  bool keep_alive = true;
+  bool keep_alive = status_code >= 400 ? false : true;
   std::string keep_alive_header = "5";
 
   // Response line
