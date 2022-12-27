@@ -50,7 +50,6 @@ namespace ft
 		ServerChildMap			serverChild_map_;
 		DefaultServerChildMap	default_serverChild_map_;
 		std::map<int, HTTPRequestPair>	httpRequest_pair_map_;
-		HttpResponse	http_response_;
 		LocationConfig	dfltLocConf;
 
 		void create_serverChild_map_();

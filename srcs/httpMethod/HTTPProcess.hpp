@@ -7,6 +7,6 @@
 
 #include "HTTPProcess.hpp"
 
-std::string http_process(ft::ServerChild server_child);
+std::string http_process(ft::ServerChild& server_child);
 
 #endif //WEBSERV_SRCS_HTTPMETHOD_HTTPPROCESS_HPP_

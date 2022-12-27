@@ -4,8 +4,7 @@
 namespace ft
 {
 	Server::Server(const std::string config_path) : server_config_list_(), socket_(),
-		serverChild_map_(), default_serverChild_map_(), httpRequest_pair_map_(),
-		http_response_()
+		serverChild_map_(), default_serverChild_map_(), httpRequest_pair_map_()
 	{
 		import_config_(config_path);
 		socket_.setup(server_config_list_);
@@ -100,11 +99,12 @@ namespace ft
 				std::cout << serverChild.Get_body() << std::endl;
 
 				response_code = serverChild.Get_response_code();
-				if (response_code >= 300)
-					response = http_response_.GetResponseMessage(response_code);
-				else
+				if (response_code >= 300) {
+					response = CreateSimpleResponse(response_code);
+				} else {
                 	response = http_process(serverChild);
-
+					response_code = serverChild.Get_response_code();
+				}
                 std::cout << "RESPONSE: \n" << response << std::endl; // Debug
 
                 socket_.send_msg(recieved_msg.client_id, response_code, response);
@@ -127,7 +127,7 @@ namespace ft
 		}
 		catch (const ft::Socket::serverInternalError &client_id)
 		{
-            socket_.send_msg(client_id.client_id, 500, http_response_.GetResponseMessage(500));
+            socket_.send_msg(client_id.client_id, 500, CreateSimpleResponse(500));
 		}
 
 		return (false);

@@ -15,7 +15,7 @@
  * @author ymori
  *
  */
-std::string http_process(ft::ServerChild server_child) {
+std::string http_process(ft::ServerChild& server_child) {
   std::string response_message_str;
 
   /*
@@ -33,6 +33,7 @@ std::string http_process(ft::ServerChild server_child) {
   bool is_CGI = false;
   std::string query_string_;
   std::string plane_filepath = get_uri_and_check_CGI(kFilePath, query_string_, is_CGI);
+  int ret;
 
   // TODO: delete. for debug
   std::cerr << "*************************" << std::endl;
@@ -43,19 +44,24 @@ std::string http_process(ft::ServerChild server_child) {
 
   if (kRequestMethod == "POST") {
     // Any POST request is CGI
-    do_CGI(response_message_str, server_child, plane_filepath, query_string_);
+    ret = do_CGI(response_message_str, server_child, plane_filepath, query_string_);
+    server_child.Set_response_code(ret);
   } else if (kRequestMethod == "GET") {
     if (is_CGI) {
-      do_CGI(response_message_str, server_child, plane_filepath, query_string_);
+      ret = do_CGI(response_message_str, server_child, plane_filepath, query_string_);
     } else {
-      do_get(response_message_str, plane_filepath);
+      ret = do_get(response_message_str, plane_filepath);
     }
+    server_child.Set_response_code(ret);
   } else if (kRequestMethod == "PUT") {
-    do_put(response_message_str, plane_filepath, kHttpBody);
+    ret = do_put(response_message_str, plane_filepath, kHttpBody);
+    server_child.Set_response_code(ret);
   } else if (kRequestMethod == "DELETE") {
-    do_delete(response_message_str, plane_filepath);
+    ret = do_delete(response_message_str, plane_filepath);
+    server_child.Set_response_code(ret);
   } else {
-    disallow_method(response_message_str);
+    ret = disallow_method(response_message_str);
+    server_child.Set_response_code(ret);
   }
 
   return response_message_str;

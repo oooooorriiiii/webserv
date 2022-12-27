@@ -5,17 +5,13 @@
 #ifndef WEBSERV_SRCS_HTTPRESPONSE_HPP_
 #define WEBSERV_SRCS_HTTPRESPONSE_HPP_
 
+#include <string>
 #define CRLF "\r\n"
 
-class HttpResponse {
- public:
-  HttpResponse();
-  ~HttpResponse();
-  static std::string GetResponseLine(int status_code);
-  static std::string GetResponseMessage(int status_code);
-  static std::string CreateResponseNoSuccessBody(int status_code);
-
- private:
-};
+std::string GetResponseLine(int status_code);
+std::string CreateDate();
+std::string CreateErrorSentence(int status_code);
+std::string CreateSimpleResponse(int status_code);
+std::string CreateSimpleResponseBody(const std::string& err);
 
 #endif //WEBSERV_SRCS_HTTPRESPONSE_HPP_

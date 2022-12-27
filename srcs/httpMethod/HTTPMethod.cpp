@@ -42,44 +42,6 @@
 
 /**
  *
- * @return GMT time in RFC7231 format
- */
-std::string CreateDate() {
-  char date[1024];
-  time_t gmt_time;
-
-  time(&gmt_time);
-  strftime(date, 1024, "%a, %d %b %Y %X %Z", gmtime(&gmt_time)); // RFC7231
-
-  return std::string(date);
-}
-
-/**
- *
- * @param status_code
- * @return
- */
-std::string CreateErrorSentence(int status_code) {
-  std::stringstream error_sentence;
-
-// Error file create
-//  << "<!DOCTYPE html>" << CRLF;
-//  << "<html><head>" << CRLF;
-//  << "<title>Error</title></head>" << CRLF;
-//  << "<body>Error</body>" << CRLF;
-
-  error_sentence << "HTTP/1.1 " << HttpResponse::GetResponseLine(status_code)
-                 << CRLF; // TODO: check status code
-  error_sentence << "Server: " << "42webserv" << "/1.0" << CRLF;
-  error_sentence << "Date: " << CreateDate() << CRLF;
-  error_sentence << "Content-Type: text/html";
-
-  return error_sentence.str();
-}
-
-
-/**
- *
  * @param http_body
  * @param file_path
  * @param response_message_str
@@ -101,12 +63,12 @@ int do_put(std::string &response_message_str,
     // file is already exist
     // overwrite
     // 204 No Content
-    response_message_stream << "HTTP/1.1 " << HttpResponse::GetResponseLine(204) << CRLF;
+    response_message_stream << "HTTP/1.1 " << GetResponseLine(204) << CRLF;
     response_status = 204;
   } else {
     // file is new added
     // 201 content created
-    response_message_stream << "HTTP/1.1 " << HttpResponse::GetResponseLine(201) << CRLF;
+    response_message_stream << "HTTP/1.1 " << GetResponseLine(201) << CRLF;
     response_status = 201;
   }
 
@@ -140,8 +102,7 @@ int do_get(std::string &response_message_str, const std::string &file_path) {
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_stream << CreateErrorSentence(404);
-    response_message_str = response_message_stream.str();
+    response_message_str = CreateSimpleResponse(404);
     return (404);
   }
 
@@ -242,8 +203,7 @@ int do_CGI(std::string &response_message_str,
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_stream << CreateErrorSentence(404);
-    response_message_str = response_message_stream.str();
+    response_message_str = CreateSimpleResponse(404);
     return (404);
   }
 
@@ -266,8 +226,7 @@ int do_CGI(std::string &response_message_str,
     cgi.Execute();
   } catch (std::exception &e) {
     // status 500
-    response_message_stream << CreateErrorSentence(500);
-    response_message_str = response_message_stream.str();
+    response_message_str = CreateSimpleResponse(500); 
     return (500);
   }
   int cgi_out_stream = cgi.GetCgiSocket();

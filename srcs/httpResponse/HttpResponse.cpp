@@ -8,11 +8,6 @@
 #include "HttpResponse.hpp"
 #include "status_code.hpp"
 
-
-HttpResponse::HttpResponse() {}
-HttpResponse::~HttpResponse() {}
-
-
 /*
  * nginx
  *  - Server
@@ -44,7 +39,7 @@ HttpResponse::~HttpResponse() {}
  *    - Accept-Encoding
  */
 
-std::string HttpResponse::GetResponseLine(int status_code) {
+std::string GetResponseLine(int status_code) {
   switch (status_code) {
     case HTTP_OK:return "200 OK";
     case HTTP_CREATED:return "201 Created";
@@ -109,108 +104,68 @@ std::string HttpResponse::GetResponseLine(int status_code) {
   }
 }
 
-std::string HttpResponse::CreateResponseNoSuccessBody(int status_code) {
-  std::stringstream response_body;
-
-  response_body << "<html>" CRLF
-                << "<head><title>"
-                << GetResponseLine(status_code)
-                << "</title></head>" CRLF
-                << "<body>" CRLF
-                << "<center><h1>"
-                << GetResponseLine(status_code)
-                << "</h1></center>" CRLF;
-
-  return response_body.str();
-}
-
-std::string HttpResponse::GetResponseMessage(int status_code) {
-  std::stringstream response_message;
-  std::string error_response_body = status_code >= 300 ? CreateResponseNoSuccessBody(status_code) : "";
-
-  // Temporary val
+/**
+ *
+ * @return GMT time in RFC7231 format
+ */
+std::string CreateDate() {
   char date[1024];
   time_t gmt_time;
+
   time(&gmt_time);
   strftime(date, 1024, "%a, %d %b %Y %X %Z", gmtime(&gmt_time)); // RFC7231
-  std::string content_type = "text/html";
-  std::string content_charset = "en";
-  std::string accept_ranges = "bytes";
-  size_t content_length = 424242;
-  std::string host_data = "example.com";
-  std::string location = "/index.html";
-#define HTTP_SSL 1
-  unsigned int http_port = 80;
-  bool chunked = true;
-  bool keep_alive = status_code >= 400 ? false : true;
-  std::string keep_alive_header = "5";
 
-  // Response line
-  response_message << "HTTP/1.1 " << GetResponseLine(status_code) << CRLF; // TODO: check status code
-
-  // Response header
-  response_message << "Server: " << "42webserv" << "/1.0" << CRLF;
-
-  response_message << "Date: " << date << CRLF;
-
-  if (!content_type.empty()) {
-    response_message << "Content-Type: " << content_type;
-    if (!content_charset.empty())
-      response_message << "; charset=" << content_charset;
-    response_message << CRLF;
-  }
-  // \rと\0も数えているから見た目（printable + '\n'）より5増える　これでよい？
-  response_message << "Content-Length: " << (!error_response_body.empty() ? error_response_body.length() : content_length) << CRLF;
-  response_message << "Last-Modified: " << date << CRLF;
-
-  if (!host_data.empty()) {
-    response_message << "Location: http";
-#if (HTTP_SSL)
-    response_message << "s";
-#endif
-    response_message << "://" << host_data;
-    if (http_port != 0)
-      response_message << ":" << http_port;
-    response_message << location << CRLF;
-  }
-
-  if (chunked)
-    response_message << "Transfer-Encoding: chunked" << CRLF;
-  if (status_code == 101) // switching protocols
-    response_message << "Connection: upgrade" << CRLF;
-  else if (keep_alive) {
-    response_message << "Connection: keep-alive" << CRLF;
-    if (!keep_alive_header.empty())
-      response_message << "Keep-Alive: timeout=" << keep_alive_header << CRLF;
-  } else {
-    response_message << "Connection: close" << CRLF;
-  }
-
-//  // ETag
-//  if (true)
-//    response_message << "Accept-Ranges: " << accept_ranges << CRLF;
-
-  // Empty line
-  response_message << CRLF;
-
-  // Message Body
-  if (status_code >= 300)
-    response_message << error_response_body;
-
-  return response_message.str();
+  return std::string(date);
 }
 
-#include <sys/time.h>
+/**
+ *
+ * @param status_code
+ * @return
+ */
+std::string CreateErrorSentence(int status_code) {
+  std::stringstream error_sentence;
 
-// TODO: REMOVE
-// TEST MAIN
-//int main() {
-//  HttpResponse r;
-//
-//  for (int i = 200; i < 508; ++i) {
-//    if (r.GetResponseMessage(i).find("ERROR NO OUTPUT") == std::string::npos)
-//      std::cout << r.GetResponseMessage(i) << std::endl;
-//  }
-//
-//  return 0;
-//}
+// Error file create
+//  << "<!DOCTYPE html>" << CRLF;
+//  << "<html><head>" << CRLF;
+//  << "<title>Error</title></head>" << CRLF;
+//  << "<body>Error</body>" << CRLF;
+
+  error_sentence << "HTTP/1.1 " << GetResponseLine(status_code)
+                 << CRLF; // TODO: check status code
+  error_sentence << "Server: " << "42webserv" << "/1.0" << CRLF;
+  error_sentence << "Date: " << CreateDate() << CRLF;
+  error_sentence << "Content-Type: text/html" << CRLF;
+
+  return error_sentence.str();
+}
+
+std::string CreateSimpleResponseBody(const std::string& response) {
+  std::stringstream body;
+  body << "<!DOCTYPE html>" << CRLF
+    << "<html>" << CRLF
+    << "<head>" << CRLF
+    << "<title>" << response << "</title>" << CRLF
+    << "</head>" << CRLF
+    << "<body>" << CRLF
+    << "<center><h1>" << response << "</h1></center>" << CRLF
+    << "<hr><center>inception/0.0.1</center>" << CRLF
+    << "</body>" << CRLF
+    << "</html>" << CRLF;
+
+  return (body.str());
+}
+
+std::string CreateSimpleResponse(int status_code) {
+  std::stringstream response;
+
+  std::string body = CreateSimpleResponseBody(GetResponseLine(status_code));
+
+  response << CreateErrorSentence(status_code)
+    << "content-length" << body.size() << CRLF
+    << "connection:close" << CRLF << CRLF
+    << body;
+
+  return (response.str());
+}
