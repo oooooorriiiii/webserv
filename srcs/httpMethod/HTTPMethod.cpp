@@ -93,7 +93,9 @@ int do_put(std::string &response_message_str,
  * @param response_message_str
  * @return
  */
-int do_get(std::string &response_message_str, const std::string &file_path) {
+int do_get(std::string &response_message_str,
+          const std::string &file_path,
+          const ServerConfig::err_page_map& err_pages) {
   int response_status;
   std::stringstream response_message_stream;
 
@@ -102,7 +104,7 @@ int do_get(std::string &response_message_str, const std::string &file_path) {
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateSimpleResponse(404);
+    response_message_str = CreateSimpleResponse(404, err_pages);
     return (404);
   }
 
@@ -188,7 +190,8 @@ int do_delete(std::string &response_message_str, const std::string &file_path) {
 int do_CGI(std::string &response_message_str,
            ft::ServerChild server_child,
            std::string file_path,
-           std::string query_string) {
+           std::string query_string,
+           const ServerConfig::err_page_map& err_pages) {
   int response_status;
   std::stringstream response_message_stream;
   const int buf_size = 1024;
@@ -203,7 +206,7 @@ int do_CGI(std::string &response_message_str,
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateSimpleResponse(404);
+    response_message_str = CreateSimpleResponse(404, err_pages);
     return (404);
   }
 
@@ -226,7 +229,7 @@ int do_CGI(std::string &response_message_str,
     cgi.Execute();
   } catch (std::exception &e) {
     // status 500
-    response_message_str = CreateSimpleResponse(500); 
+    response_message_str = CreateSimpleResponse(500, err_pages); 
     return (500);
   }
   int cgi_out_stream = cgi.GetCgiSocket();
@@ -272,7 +275,7 @@ int do_CGI(std::string &response_message_str,
 int disallow_method(std::string &response_message_str) {
   int response_status = 405;
 
-  response_message_str = CreateErrorSentence(response_status);
+  response_message_str = CreateSimpleResponseHeaders(response_status);
 
   return response_status;
 }

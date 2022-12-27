@@ -100,7 +100,8 @@ namespace ft
 
 				response_code = serverChild.Get_response_code();
 				if (response_code >= 300) {
-					response = CreateSimpleResponse(response_code);
+					ServerConfig::err_page_map error_pages = serverChild.Get_server_config().getErrorPage();
+					response = CreateSimpleResponse(response_code, error_pages);
 				} else {
                 	response = http_process(serverChild);
 					response_code = serverChild.Get_response_code();
@@ -126,8 +127,10 @@ namespace ft
 			std::cerr << "no msg recieved" << std::endl;
 		}
 		catch (const ft::Socket::serverInternalError &client_id)
-		{
-            socket_.send_msg(client_id.client_id, 500, CreateSimpleResponse(500));
+		{	
+			ServerChild& serverChild = httpRequest_pair_map_[recieved_msg.client_id].second;
+			ServerConfig::err_page_map error_pages = serverChild.Get_server_config().getErrorPage();
+            socket_.send_msg(client_id.client_id, 500, CreateSimpleResponse(500, error_pages));
 		}
 
 		return (false);

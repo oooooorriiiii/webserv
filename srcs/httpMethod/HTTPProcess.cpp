@@ -41,16 +41,19 @@ std::string http_process(ft::ServerChild& server_child) {
   std::cerr << "plane_filepath:          " << plane_filepath << std::endl;
   std::cerr << "*************************" << std::endl;
   // ***
-
+ 
   if (kRequestMethod == "POST") {
     // Any POST request is CGI
-    ret = do_CGI(response_message_str, server_child, plane_filepath, query_string_);
+    ret = do_CGI(response_message_str, server_child, plane_filepath,
+          query_string_, server_child.Get_server_config().getErrorPage());
     server_child.Set_response_code(ret);
   } else if (kRequestMethod == "GET") {
     if (is_CGI) {
-      ret = do_CGI(response_message_str, server_child, plane_filepath, query_string_);
+      ret = do_CGI(response_message_str, server_child, plane_filepath,
+            query_string_, server_child.Get_server_config().getErrorPage());
     } else {
-      ret = do_get(response_message_str, plane_filepath);
+      ret = do_get(response_message_str, plane_filepath,
+            server_child.Get_server_config().getErrorPage());
     }
     server_child.Set_response_code(ret);
   } else if (kRequestMethod == "PUT") {

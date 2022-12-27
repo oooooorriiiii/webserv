@@ -123,22 +123,15 @@ std::string CreateDate() {
  * @param status_code
  * @return
  */
-std::string CreateErrorSentence(int status_code) {
-  std::stringstream error_sentence;
+std::string CreateSimpleResponseHeaders(int status_code) {
+  std::stringstream defaultHeaders;
 
-// Error file create
-//  << "<!DOCTYPE html>" << CRLF;
-//  << "<html><head>" << CRLF;
-//  << "<title>Error</title></head>" << CRLF;
-//  << "<body>Error</body>" << CRLF;
+  defaultHeaders  << "HTTP/1.1 " << GetResponseLine(status_code) << CRLF
+                  << "Server: " << "42webserv" << "/1.0" << CRLF
+                  << "Date: " << CreateDate() << CRLF
+                  << "Content-Type: text/html" << CRLF;
 
-  error_sentence << "HTTP/1.1 " << GetResponseLine(status_code)
-                 << CRLF; // TODO: check status code
-  error_sentence << "Server: " << "42webserv" << "/1.0" << CRLF;
-  error_sentence << "Date: " << CreateDate() << CRLF;
-  error_sentence << "Content-Type: text/html" << CRLF;
-
-  return error_sentence.str();
+  return (defaultHeaders.str());
 }
 
 std::string CreateSimpleResponseBody(const std::string& response) {
@@ -157,14 +150,42 @@ std::string CreateSimpleResponseBody(const std::string& response) {
   return (body.str());
 }
 
-std::string CreateSimpleResponse(int status_code) {
+std::string FileContentToStr(int status_code, const std::string& path) {
+  // if can't find the file, return createSimpleResponseBody
+  struct stat st = {};
+  int ret_val = stat(path.c_str(), &st);
+
+  if (ret_val < 0 || !S_ISREG(st.st_mode)) {
+    return (CreateSimpleResponseBody(GetResponseLine(status_code)));
+  }
+
+  std::ifstream contents(path.c_str());
+  std::stringstream buffer;
+
+  buffer << contents.rdbuf(); 
+  return (buffer.str());
+}
+
+std::string CreateSimpleResponse(int status_code, ServerConfig::err_page_map err_pages) {
   std::stringstream response;
+  std::string       body;
+  std::string       connection;
+  
+  ServerConfig::err_page_map::iterator err_page = err_pages.find(status_code);
+  std::string serverHTMLDir = "./var/www/inception_server/html/";
+  if (status_code >= 400 && err_page != err_pages.end()) {
+    body = FileContentToStr(status_code, serverHTMLDir + err_page->second);
+  } else {
+    body = CreateSimpleResponseBody(GetResponseLine(status_code));
+  }
 
-  std::string body = CreateSimpleResponseBody(GetResponseLine(status_code));
+  // TODO: reference original requests' connection header
+  connection = status_code >=400 ? "close" : "keep-alive";
+  
 
-  response << CreateErrorSentence(status_code)
+  response << CreateSimpleResponseHeaders(status_code)
     << "content-length" << body.size() << CRLF
-    << "connection:close" << CRLF << CRLF
+    << "connection: " << connection << CRLF << CRLF
     << body;
 
   return (response.str());
