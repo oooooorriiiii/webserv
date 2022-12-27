@@ -3,13 +3,14 @@
 
 namespace ft
 {
-	Server::Server(const std::string config_path) : server_config_(), socket_(),
+	Server::Server(const std::string config_path) : server_config_list_(), socket_(),
 		serverChild_map_(), default_serverChild_map_(), httpRequest_pair_map_(),
 		http_response_()
 	{
 		import_config_(config_path);
-		socket_.setup(server_config_);
+		socket_.setup(server_config_list_);
 		create_serverChild_map_();
+		dfltLocConf = CreateDfltLocConf();
 	}
 	Server::~Server()
 	{
@@ -25,17 +26,49 @@ namespace ft
 		}
 	}
 
+	LocationConfig	Server::CreateDfltLocConf() {
+		LocationConfig dfltLoc;
+		std::set<std::string> allow_method;
+		std::vector<std::string> index;
+
+		allow_method.insert("GET");
+		index.push_back("index.html");
+
+		dfltLoc.setUri("/");
+		dfltLoc.setAlias("./var/www/inception_server/html/");
+		dfltLoc.setAutoindex(false);
+		dfltLoc.setAllowMethod(allow_method);
+		dfltLoc.addIndex(index);
+		
+		return(dfltLoc);
+	}
+
+	ServerConfig	Server::CreateDfltServConf(const std::string& host, unsigned int port) {
+		ServerConfig	dfltSrv;
+		ServerConfig::err_page_map err_page;
+
+		err_page.insert(std::make_pair(404, "/error404.html"));
+
+		dfltSrv.setServerName(host);
+		dfltSrv.setListen(port);
+		dfltSrv.setClientMaxBodySize(1000000);
+		dfltSrv.addErrorPage(err_page);
+		dfltSrv.addLocationConfig(dfltLocConf.getUri(), dfltLocConf);
+
+		return (dfltSrv);
+	}
+
 	void Server::import_config_(const std::string config_path)
 	{
 		ConfigParser configParser;
-		server_config_ = configParser.readFile(config_path).getServerConfig();
+		server_config_list_ = configParser.readFile(config_path).getServerConfig();
 		//print_server_config();
 	}
 
 	void Server::create_serverChild_map_()
 	{
-		std::vector<ServerConfig>::const_iterator end = server_config_.end();
-		for (std::vector<ServerConfig>::const_iterator it = server_config_.begin(); it != end; ++it)
+		std::vector<ServerConfig>::const_iterator end = server_config_list_.end();
+		for (std::vector<ServerConfig>::const_iterator it = server_config_list_.begin(); it != end; ++it)
 		{
 			std::pair<std::string, in_port_t> key_to_insert = std::make_pair((*it).getServerName(), (in_port_t)(*it).getListen());
 			serverChild_map_.insert(std::make_pair(key_to_insert, ServerChild(*it)));
@@ -135,27 +168,38 @@ namespace ft
 		}	
 	}
 
-	ServerChild& Server::decide_serverChild_config_(const std::string& host, in_port_t port) {
+	ServerChild		Server::decide_serverChild_config_(const std::string& host, in_port_t port) {
         ServerChildMap::iterator confIt = serverChild_map_.find(std::make_pair(host, port));
-
+		ServerChild server_child;
+		ServerConfig::loc_conf_map	location_config_list;
+		
         if (confIt != serverChild_map_.end()) {
 			std::cout << "found serverChild by httpRequest host\n";
-            return (confIt->second);
+            server_child = confIt->second;
         } else {
 			std::cout << "could not find serverchild, using default\n";
 			DefaultServerChildMap::iterator it = default_serverChild_map_.find(port);
 			if (it == default_serverChild_map_.end()) {
-				throw std::runtime_error("port does not match any default servers");
+				std::cout << "No Default server Conf, creating webserv default server Config\n";
+				server_child = ServerChild(CreateDfltServConf(host, port));
+			} else {
+            	server_child = it->second;
 			}
-            return (it->second);
+
         }
+
+		ServerConfig& serverConf = server_child.Get_server_config();
+		location_config_list = serverConf.getLocationConfigList();
+		if (location_config_list.find("/") == location_config_list.end())
+			serverConf.addLocationConfig(dfltLocConf.getUri(), dfltLocConf);
+		return (server_child);
 	}
 
 	void Server::print_server_config() {
-		for (std::vector<ServerConfig>::iterator it = server_config_.begin(); it != server_config_.end(); ++it) {
+		for (std::vector<ServerConfig>::iterator it = server_config_list_.begin(); it != server_config_list_.end(); ++it) {
 			std::cout << "\t\t-----------SERVER-----------" << std::endl;
 			it->print();
-			for (ServerConfig::loc_conf_map::const_iterator lIt = it->getLocationConfig().begin(); lIt != it->getLocationConfig().end(); ++lIt) {
+			for (ServerConfig::loc_conf_map::const_iterator lIt = it->getLocationConfigList().begin(); lIt != it->getLocationConfigList().end(); ++lIt) {
 				std::cout << "\t------loc: " << lIt->first << " ------" << std::endl;
 				lIt->second.print();
 			}
