@@ -189,7 +189,7 @@ namespace ft
 			response_code_ = location_config_.getRedirect().first;
 			path_ = location_config_.getRedirect().second;
 		} else {
-	        path_ = location_config_.getAlias() + pathParts;
+	        path_ = location_config_.getAlias() + location_config_.getUri() + pathParts;
 		}
     }
 
