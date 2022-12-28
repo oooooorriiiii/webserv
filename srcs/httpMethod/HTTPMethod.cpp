@@ -151,7 +151,9 @@ int do_get(std::string &response_message_str,
  * @param response_message_str
  * @return
  */
-int do_delete(std::string &response_message_str, const std::string &file_path) {
+int do_delete(std::string &response_message_str,
+              const std::string &file_path,
+              const ServerConfig::err_page_map& err_pages) {
   int response_status;
   std::stringstream response_message_stream;
   std::string delete_dir = "ok";
@@ -170,8 +172,8 @@ int do_delete(std::string &response_message_str, const std::string &file_path) {
     response_message_stream << "HTTP/1.1 204 No Content" << CRLF;
     response_status = 204;
   } else {
-    response_message_stream << "HTTP/1.1 500 Server Error" << CRLF;
-    response_status = 500;
+    response_message_str = CreateSimpleResponse(500, err_pages);
+    return (500);
   }
 
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
@@ -263,19 +265,5 @@ int do_CGI(std::string &response_message_str,
   response_message_stream << cgi_output.str();
 
   response_message_str = response_message_stream.str();
-  return response_status;
-}
-
-
-/**
- *
- * @param response_message_str
- * @return
- */
-int disallow_method(std::string &response_message_str) {
-  int response_status = 405;
-
-  response_message_str = CreateSimpleResponseHeaders(response_status);
-
   return response_status;
 }

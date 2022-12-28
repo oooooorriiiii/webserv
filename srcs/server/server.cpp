@@ -100,11 +100,14 @@ namespace ft
 
 				response_code = serverChild.Get_response_code();
 				if (response_code >= 300 && response_code < 400) {
+					std::cout << "request is redirct\n";
 					response = CreateRedirectResponse(response_code, serverChild.Get_path());
 				} else if (response_code >= 400) {
+					std::cout << "request is bad\n";
 					ServerConfig::err_page_map error_pages = serverChild.Get_server_config().getErrorPage();
 					response = CreateSimpleResponse(response_code, error_pages);
 				} else {
+					std::cout << "request is good\n";
                 	response = http_process(serverChild);
 					response_code = serverChild.Get_response_code();
 				}
