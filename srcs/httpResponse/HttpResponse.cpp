@@ -138,13 +138,13 @@ std::string CreateSimpleResponseBody(const std::string& response) {
   std::stringstream body;
   body << "<!DOCTYPE html>" << CRLF
     << "<html>" << CRLF
-    << "<head>" << CRLF
-    << "<title>" << response << "</title>" << CRLF
-    << "</head>" << CRLF
-    << "<body>" << CRLF
-    << "<center><h1>" << response << "</h1></center>" << CRLF
-    << "<hr><center>inception/0.0.1</center>" << CRLF
-    << "</body>" << CRLF
+    << "\t<head>" << CRLF
+    << "\t\t<title>" << response << "</title>" << CRLF
+    << "\t</head>" << CRLF
+    << "\t<body>" << CRLF
+    << "\t\t<center><h1>" << response << "</h1></center>" << CRLF
+    << "\t\t<hr><center>inception/0.0.1</center>" << CRLF
+    << "\t</body>" << CRLF
     << "</html>" << CRLF;
 
   return (body.str());
