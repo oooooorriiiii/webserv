@@ -29,19 +29,19 @@ namespace ft {
 
     class HTTPHead {
     public:
-        typedef std::map<std::string, std::string>  header_type;
+        typedef std::map<std::string, std::string>  header_field_map;
         typedef std::pair<std::string, std::string> header_value;
 
     private:
 
-        int             _responseCode;
-        HTTPParseStatus _parseStatus;
-        std::string     _requestMethod;
-        std::string     _requestURI;
-        std::string     _HTTPv;
-        header_type     _headerFields;
-        header_value    _currentHeader; 
-        std::string     _save;
+        int                 _responseCode;
+        HTTPParseStatus     _parseStatus;
+        std::string         _requestMethod;
+        std::string         _requestURI;
+        std::string         _HTTPv;
+        header_field_map    _headerFields;
+        header_value        _currentHeader; 
+        std::string         _save;
 
 
     public:
@@ -59,7 +59,7 @@ namespace ft {
         const std::string&      GetRequestMethod() const;
         std::string&            GetRequestURI();
         const std::string&      GetHTTPv() const;
-        header_type&            GetHeaderFields();
+        header_field_map&       GetHeaderFields();
         const std::string&      getSave() const;
 
 

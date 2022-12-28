@@ -125,7 +125,7 @@ namespace ft
 		decide_parse_status_();
 
 		if (parse_status_ == readStraight) {
-			header_map::iterator content_length = HTTP_head_.GetHeaderFields().find("content-length");
+			header_field_map::iterator content_length = HTTP_head_.GetHeaderFields().find("content-length");
 
           	content_length_ = strBase_to_UI_(content_length->second, std::dec);
            	if (content_length_ > max_body_size_) {
@@ -207,8 +207,8 @@ namespace ft
 	}
 
 	void	ServerChild::check_headers_() {
-		header_map headers = HTTP_head_.GetHeaderFields();
-		for (header_map::iterator it = headers.begin(); it != headers.end(); ++it) {
+		header_field_map headers = HTTP_head_.GetHeaderFields();
+		for (header_field_map::iterator it = headers.begin(); it != headers.end(); ++it) {
 			// check for WSP in key
         	if (isspace(it->first[it->first.size() - 1])) {
             	throw_(400, "Bad Request - trailing white space after header key");
@@ -233,9 +233,9 @@ namespace ft
 	}
 
 	void	ServerChild::decide_parse_status_() {
-		header_map headers = HTTP_head_.GetHeaderFields();
-		header_map::iterator transfer_encoding = headers.find("transfer-encoding");
-        header_map::iterator content_length = headers.find("content-length");
+		header_field_map headers = HTTP_head_.GetHeaderFields();
+		header_field_map::iterator transfer_encoding = headers.find("transfer-encoding");
+        header_field_map::iterator content_length = headers.find("content-length");
 
         if (transfer_encoding != headers.end() && content_length != headers.end()) {
             headers.erase(content_length); 

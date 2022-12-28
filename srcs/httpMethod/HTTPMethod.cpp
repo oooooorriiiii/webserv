@@ -49,7 +49,8 @@
  */
 int do_put(std::string &response_message_str,
            const std::string &file_path,
-           const std::string &http_body) {
+           const std::string &http_body,
+           const std::string &connection) {
   int response_status;
   std::stringstream response_message_stream;
 
@@ -80,6 +81,7 @@ int do_put(std::string &response_message_str,
 
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   response_message_stream << "Date: " << CreateDate() << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF;
 
   response_message_str = response_message_stream.str();
 
@@ -95,7 +97,8 @@ int do_put(std::string &response_message_str,
  */
 int do_get(std::string &response_message_str,
           const std::string &file_path,
-          const ServerConfig::err_page_map& err_pages) {
+          const ServerConfig::err_page_map &err_pages,
+          const std::string &connection) {
   int response_status;
   std::stringstream response_message_stream;
 
@@ -104,7 +107,7 @@ int do_get(std::string &response_message_str,
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateSimpleResponse(404, err_pages);
+    response_message_str = CreateErrorResponse(404, err_pages);
     return (404);
   }
 
@@ -129,6 +132,7 @@ int do_get(std::string &response_message_str,
   response_message_stream << "Content-Type: " << "text/html" << CRLF;
   // Content-Length:
   response_message_stream << "Content-Length: " << st.st_size << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF;
 
   // send body
   response_message_stream << CRLF;
@@ -153,7 +157,8 @@ int do_get(std::string &response_message_str,
  */
 int do_delete(std::string &response_message_str,
               const std::string &file_path,
-              const ServerConfig::err_page_map& err_pages) {
+              const ServerConfig::err_page_map &err_pages,
+              const std::string &connection) {
   int response_status;
   std::stringstream response_message_stream;
   std::string delete_dir = "ok";
@@ -172,12 +177,13 @@ int do_delete(std::string &response_message_str,
     response_message_stream << "HTTP/1.1 204 No Content" << CRLF;
     response_status = 204;
   } else {
-    response_message_str = CreateSimpleResponse(500, err_pages);
+    response_message_str = CreateErrorResponse(500, err_pages);
     return (500);
   }
 
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   response_message_stream << "Date: " << CreateDate() << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF;
 
   response_message_str = response_message_stream.str();
   return response_status;
@@ -193,7 +199,8 @@ int do_CGI(std::string &response_message_str,
            ft::ServerChild server_child,
            std::string file_path,
            std::string query_string,
-           const ServerConfig::err_page_map& err_pages) {
+           const ServerConfig::err_page_map &err_pages,
+           const std::string &connection) {
   int response_status;
   std::stringstream response_message_stream;
   const int buf_size = 1024;
@@ -208,7 +215,7 @@ int do_CGI(std::string &response_message_str,
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateSimpleResponse(404, err_pages);
+    response_message_str = CreateErrorResponse(404, err_pages);
     return (404);
   }
 
@@ -231,7 +238,7 @@ int do_CGI(std::string &response_message_str,
     cgi.Execute();
   } catch (std::exception &e) {
     // status 500
-    response_message_str = CreateSimpleResponse(500, err_pages); 
+    response_message_str = CreateErrorResponse(500, err_pages); 
     return (500);
   }
   int cgi_out_stream = cgi.GetCgiSocket();
@@ -258,6 +265,7 @@ int do_CGI(std::string &response_message_str,
   response_message_stream << "Last-Modified: " << CreateDate() << CRLF;
   response_message_stream << "Content-Type: " << "text/html" << CRLF;
   response_message_stream << "Content-Length: " << cgi_output.str().size() << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF;
 
   // send body
   response_message_stream << CRLF;

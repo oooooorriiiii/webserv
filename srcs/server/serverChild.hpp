@@ -20,7 +20,7 @@ namespace ft
 			int status_code;
 			std::string dest_uri;
 		} redirectConf;
-		typedef std::map<std::string, std::string>		header_map;
+		typedef std::map<std::string, std::string>		header_field_map;
 		typedef std::map<const std::string, redirectConf> redir_map;
 
 		ServerChild();

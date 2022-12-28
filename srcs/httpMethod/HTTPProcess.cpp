@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "HTTPMethod.hpp"
+#include "HTTPProcess.hpp"
 #include "MethodUtils.hpp"
 
 /**
@@ -25,6 +25,7 @@ std::string http_process(ft::ServerChild& server_child) {
   const std::string kFilePath = server_child.Get_path();
   const std::string kHttpBody = server_child.Get_body();
   ServerConfig::err_page_map err_pages = server_child.Get_server_config().getErrorPage();
+  const std::string connection = get_connection(server_child.Get_HTTPHead().GetHeaderFields());
 
   /*
    * TODO: Check if CGI should be executed.
@@ -46,26 +47,32 @@ std::string http_process(ft::ServerChild& server_child) {
   if (kRequestMethod == "POST") {
     // Any POST request is CGI
     ret = do_CGI(response_message_str, server_child, plane_filepath,
-                query_string_, err_pages); 
-    server_child.Set_response_code(ret);
+                query_string_, err_pages, connection);
   } else if (kRequestMethod == "GET") {
     if (is_CGI) {
       ret = do_CGI(response_message_str, server_child, plane_filepath,
-                  query_string_, err_pages);
+                  query_string_, err_pages, connection);
     } else {
-      ret = do_get(response_message_str, plane_filepath, err_pages); 
+      ret = do_get(response_message_str, plane_filepath, err_pages, connection); 
     }
-    server_child.Set_response_code(ret);
   } else if (kRequestMethod == "PUT") {
-    ret = do_put(response_message_str, plane_filepath, kHttpBody);
-    server_child.Set_response_code(ret);
+    ret = do_put(response_message_str, plane_filepath, kHttpBody, connection);
   } else if (kRequestMethod == "DELETE") {
-    ret = do_delete(response_message_str, plane_filepath, err_pages);
-    server_child.Set_response_code(ret);
+    ret = do_delete(response_message_str, plane_filepath, err_pages, connection);
   } else {
-    response_message_str = CreateSimpleResponse(501, err_pages);
-    server_child.Set_response_code(501);
+    response_message_str = CreateErrorResponse(501, err_pages);
+    ret = 501;
   }
 
+  // set the status code to 400 so that socket will close the connection
+  server_child.Set_response_code(connection == "close" ? 400 : ret);
   return response_message_str;
+}
+
+std::string get_connection(const http_header_t& headers) {
+  http_header_t::const_iterator connection = headers.find("connection");
+
+  if (connection == headers.end())
+    return ("keep-alive");
+  return (connection->second == "close" ? "close" : "keep-alive");
 }

@@ -49,7 +49,7 @@ namespace ft {
 
     static const std::string empty = "";
     const std::string&              HTTPHead::GetHost() const {
-        header_type::const_iterator host = _headerFields.find("host");
+        header_field_map::const_iterator host = _headerFields.find("host");
         return (host == _headerFields.end() ? empty : host->second);
     }
     int                             HTTPHead::GetResponseCode() const { return _responseCode;}
@@ -57,7 +57,7 @@ namespace ft {
     const std::string&              HTTPHead::GetRequestMethod() const { return _requestMethod; }
     std::string&                    HTTPHead::GetRequestURI() { return _requestURI; }
     const std::string&              HTTPHead::GetHTTPv() const { return _HTTPv; }
-    HTTPHead::header_type&          HTTPHead::GetHeaderFields() { return _headerFields; }
+    HTTPHead::header_field_map&     HTTPHead::GetHeaderFields() { return _headerFields; }
     const std::string&              HTTPHead::getSave() const { return _save; }
 
     void     HTTPHead::parseRequestLine() {
@@ -189,7 +189,7 @@ namespace ft {
 
     bool    HTTPHead::multiInclusion() {
 
-        header_type::iterator _findHeader = _headerFields.find(_currentHeader.first);
+        header_field_map::iterator _findHeader = _headerFields.find(_currentHeader.first);
 
         if (_findHeader != _headerFields.end()) {
             _headerFields[_currentHeader.first] = _findHeader->second + ", " + _currentHeader.second;
@@ -205,7 +205,7 @@ namespace ft {
 
     void    HTTPHead::PrintRequest() {
         std::cout << _requestMethod << ' ' << _requestURI << ' ' << _HTTPv << std::endl;
-        for(header_type::iterator it = _headerFields.begin(); it != _headerFields.end(); ++it) {
+        for(header_field_map::iterator it = _headerFields.begin(); it != _headerFields.end(); ++it) {
             std::cout << it->first << ":" << it->second << std::endl;
         }
     }

@@ -99,13 +99,14 @@ namespace ft
 				std::cout << serverChild.Get_body() << std::endl;
 
 				response_code = serverChild.Get_response_code();
+
 				if (response_code >= 300 && response_code < 400) {
 					std::cout << "request is redirct\n";
 					response = CreateRedirectResponse(response_code, serverChild.Get_path());
 				} else if (response_code >= 400) {
 					std::cout << "request is bad\n";
 					ServerConfig::err_page_map error_pages = serverChild.Get_server_config().getErrorPage();
-					response = CreateSimpleResponse(response_code, error_pages);
+					response = CreateErrorResponse(response_code, error_pages);
 				} else {
 					std::cout << "request is good\n";
                 	response = http_process(serverChild);
@@ -135,7 +136,8 @@ namespace ft
 		{	
 			ServerChild& serverChild = httpRequest_pair_map_[recieved_msg.client_id].second;
 			ServerConfig::err_page_map error_pages = serverChild.Get_server_config().getErrorPage();
-            socket_.send_msg(client_id.client_id, 500, CreateSimpleResponse(500, error_pages));
+
+            socket_.send_msg(client_id.client_id, 500, CreateErrorResponse(500, error_pages));
 		}
 
 		return (false);
@@ -201,7 +203,7 @@ namespace ft
 		if (location_config_list.find("/") == location_config_list.end())
 			serverConf.addLocationConfig(dfltLocConf.getUri(), dfltLocConf);
 		return (server_child);
-	}
+	}	
 
 	void Server::print_server_config() {
 		for (std::vector<ServerConfig>::iterator it = server_config_list_.begin(); it != server_config_list_.end(); ++it) {

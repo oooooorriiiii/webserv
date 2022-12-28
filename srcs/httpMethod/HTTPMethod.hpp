@@ -16,20 +16,24 @@ int return1();
 
 int do_put(std::string &response_message_str,
            const std::string &file_path,
-           const std::string &http_body);
+           const std::string &http_body,
+           const std::string &connection);
 
 int do_get(std::string &response_message_str,
             const std::string &file_path,
-            const ServerConfig::err_page_map& err_pages);
+            const ServerConfig::err_page_map &err_pages,
+            const std::string &connection);
 
 int do_delete(std::string &response_message_str,
             const std::string &file_path,
-            const ServerConfig::err_page_map& err_pages);
+            const ServerConfig::err_page_map &err_pages,
+            const std::string &connection);
 
 int do_CGI(std::string &response_message_str,
            ft::ServerChild server_child,
            std::string file_path,
            std::string query_string,
-           const ServerConfig::err_page_map& err_pages);
+           const ServerConfig::err_page_map &err_pages,
+           const std::string &connection);
 
 #endif //WEBSERV_SRCS_HTTPMETHOD_HTTPMETHOD_H_

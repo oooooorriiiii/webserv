@@ -155,6 +155,7 @@ std::string FileContentToStr(int status_code, const std::string& path) {
   struct stat st = {};
   int ret_val = stat(path.c_str(), &st);
 
+  /* becomes different status code if can't access?? */
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
     return (CreateSimpleResponseBody(GetResponseLine(status_code)));
   }
@@ -164,31 +165,6 @@ std::string FileContentToStr(int status_code, const std::string& path) {
 
   buffer << contents.rdbuf(); 
   return (buffer.str());
-}
-
-std::string CreateSimpleResponse(int status_code, ServerConfig::err_page_map err_pages) {
-  std::stringstream response;
-  std::string       body;
-  std::string       connection;
-  
-  ServerConfig::err_page_map::iterator err_page = err_pages.find(status_code);
-  std::string serverHTMLDir = "./var/www/inception_server/html/";
-  if (status_code >= 400 && err_page != err_pages.end()) {
-    body = FileContentToStr(status_code, serverHTMLDir + err_page->second);
-  } else {
-    body = CreateSimpleResponseBody(GetResponseLine(status_code));
-  }
-
-  // TODO: reference original requests' connection header
-  connection = status_code >=400 ? "close" : "keep-alive";
-  
-
-  response << CreateSimpleResponseHeaders(status_code)
-    << "content-length: " << body.size() << CRLF
-    << "connection: " << connection << CRLF << CRLF
-    << body;
-
-  return (response.str());
 }
 
 std::string CreateRedirectResponse(int status_code, const std::string& location) {
@@ -201,7 +177,29 @@ std::string CreateRedirectResponse(int status_code, const std::string& location)
   response << CreateSimpleResponseHeaders(status_code)
     << "content-length: " << body.size() << CRLF
     << "location: " << location << CRLF
-    << "connection: " << "keep-alive" << CRLF << CRLF
+    << "connection: keep-alive" << CRLF << CRLF
+    << body;
+
+  return (response.str());
+}
+
+std::string CreateErrorResponse(int status_code, const ServerConfig::err_page_map& err_pages) {
+  std::stringstream response;
+  std::string       body;
+  std::string       connection;
+  
+  ServerConfig::err_page_map::const_iterator err_page = err_pages.find(status_code);
+  std::string serverHTMLDir = "./var/www/inception_server/html/";
+
+  if (err_page != err_pages.end()) {
+    body = FileContentToStr(status_code, serverHTMLDir + err_page->second);
+  } else {
+    body = CreateSimpleResponseBody(GetResponseLine(status_code));
+  }
+
+  response << CreateSimpleResponseHeaders(status_code)
+    << "content-length: " << body.size() << CRLF
+    << "connection: close" << CRLF << CRLF
     << body;
 
   return (response.str());
