@@ -184,8 +184,24 @@ std::string CreateSimpleResponse(int status_code, ServerConfig::err_page_map err
   
 
   response << CreateSimpleResponseHeaders(status_code)
-    << "content-length" << body.size() << CRLF
+    << "content-length: " << body.size() << CRLF
     << "connection: " << connection << CRLF << CRLF
+    << body;
+
+  return (response.str());
+}
+
+std::string CreateRedirectResponse(int status_code, const std::string& location) {
+  std::stringstream response;
+  std::string       body;
+  std::string       connection;
+
+  body = CreateSimpleResponseBody(GetResponseLine(status_code)); 
+
+  response << CreateSimpleResponseHeaders(status_code)
+    << "content-length: " << body.size() << CRLF
+    << "location: " << location << CRLF
+    << "connection: " << "keep-alive" << CRLF << CRLF
     << body;
 
   return (response.str());

@@ -99,7 +99,9 @@ namespace ft
 				std::cout << serverChild.Get_body() << std::endl;
 
 				response_code = serverChild.Get_response_code();
-				if (response_code >= 300) {
+				if (response_code >= 300 && response_code < 400) {
+					response = CreateRedirectResponse(response_code, serverChild.Get_path());
+				} else if (response_code >= 400) {
 					ServerConfig::err_page_map error_pages = serverChild.Get_server_config().getErrorPage();
 					response = CreateSimpleResponse(response_code, error_pages);
 				} else {
