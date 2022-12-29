@@ -105,14 +105,13 @@ namespace ft
 		// Find location conf
 		setUp_locationConfig_();
 
+		// validate request method
+		check_method_();
+
 		// return in case of redirect
-		/* check nginx NOOOO /redirect  HTTP/1.1 */
 		if (parse_status_ == complete) {
 			return ;
 		}
-
-		// validate request method
-		check_method_();
 
 		/** check IS CGI? **/
 		/*if (HTTP_head_.GetRequestURI().find('?') != std::string::npos) {
@@ -183,7 +182,7 @@ namespace ft
         location_config_ = locConfIt->second;
 		if (location_config_.getRedirect().first != LocationConfig::NO_REDIRECT) {
 			if (HTTP_head_.GetRequestMethod() != "GET") {
-				throw_(400, "Redirect only allowed with GET");
+				throw_(501, "Redirect only allowed with GET");
 			}
 			parse_status_ = complete;
 			response_code_ = location_config_.getRedirect().first;
@@ -219,7 +218,7 @@ namespace ft
         	}
 			// Check for Trailer
 			if (it->first == "trailer") {
-				throw_(400, "Bad Request - Trailer included");
+				throw_(501, "Not Implemented - Trailer included");
 			}
 			// check transfer-encoding
 			if (it->first == "transfer-encoding" && it->second != "chunked") {
