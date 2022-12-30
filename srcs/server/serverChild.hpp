@@ -3,6 +3,10 @@
 
 #include "../config/Config.hpp"
 #include "../HTTP/HTTPHead.hpp"
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <map>
 #include <set>
 #include <sstream>
@@ -67,6 +71,7 @@ namespace ft
 		void	setUp_locationConfig_();
 		void	check_headers_();
 		void	check_method_();
+		void	attach_index();
 		void	decide_parse_status_();
 		void	read_body_(unsigned int len);
         void	read_straight_();

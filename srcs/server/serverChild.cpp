@@ -113,6 +113,9 @@ namespace ft
 			return ;
 		}
 
+		// use index from config if URI is a directory
+		attach_index();
+
 		/** check IS CGI? **/
 		/*if (HTTP_head_.GetRequestURI().find('?') != std::string::npos) {
 			// read body??
@@ -203,6 +206,33 @@ namespace ft
 		if (valid_methods.find(HTTP_head_.GetRequestMethod()) == end) {
             throw_(501, "Not Implemented - invalid request method");
         }
+	}
+
+	void	ServerChild::attach_index() {
+		std::vector<std::string> indexes = location_config_.getIndex();
+		struct stat sb;
+
+   		if (stat(path_.c_str(), &sb) == -1) {
+			std::cout << "URIII not good\n";
+			if (errno == EACCES)
+				throw_(403, "forbidden - cannot access uri path");
+			else if (errno == ENOENT)
+				throw_(404, "forbidden - path doesn't exist");
+			else {
+				throw_(500, "Internal error - nomem or other");
+			}
+		}
+		if (!S_ISDIR(sb.st_mode))
+			return ;	
+
+		for (std::vector<std::string>::iterator it = indexes.begin(); it != indexes.end(); ++it) {
+			std::string tmp = path_ + "/" + *it;
+			if (stat(tmp.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode)) {
+				continue ;	
+			}
+			path_ += "/" + *it;
+			break ;
+		}
 	}
 
 	void	ServerChild::check_headers_() {
@@ -331,6 +361,4 @@ namespace ft
             throw_(413, "Payload Too Large");
 		}
 	}
-
-
 } // namespace ft
