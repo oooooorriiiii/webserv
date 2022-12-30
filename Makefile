@@ -13,8 +13,7 @@ HTTPMETHODSRCS :=	srcs/cgi/Cgi.cpp \
 					srcs/httpMethod/AutoIndex.cpp \
 					srcs/httpMethod/HTTPMethod.cpp \
 					srcs/httpMethod/HTTPProcess.cpp \
-					srcs/httpMethod/MethodUtils.cpp \
-					srcs/httpMethod/Redirection.cpp
+					srcs/httpMethod/MethodUtils.cpp
 HTTPRESPONSESRCS :=	srcs/httpResponse/HttpResponse.cpp
 SRCS := main.cpp srcs/utils/utils.cpp $(CONFIGSRCS) $(HTTPSRCS) $(SOCKETSRCS) $(HTTPMETHODSRCS) $(HTTPRESPONSESRCS)
 OBJS := $(SRCS:.cpp=.o)

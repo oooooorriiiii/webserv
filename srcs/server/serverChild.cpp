@@ -16,8 +16,8 @@ namespace ft
 		: server_config_(server_config), location_config_(), redirectList_map_(), response_code_(),
 		parse_status_(), HTTP_head_(), content_length_(), read_bytes_(), max_body_size_(), body_(), save_(), path_(), hex_bytes_()
 	{
-		ServerConfig::loc_conf_map::const_iterator itend = server_config.getLocationConfig().end();
-		for (ServerConfig::loc_conf_map::const_iterator it = server_config.getLocationConfig().begin(); it != itend; ++it)
+		ServerConfig::loc_conf_map::const_iterator itend = server_config.getLocationConfigList().end();
+		for (ServerConfig::loc_conf_map::const_iterator it = server_config.getLocationConfigList().begin(); it != itend; ++it)
 		{
 			LocationConfig location_config = (*it).second;
 			if (location_config.getRedirect().first != LocationConfig::NO_REDIRECT)
@@ -86,8 +86,8 @@ namespace ft
 	HTTPHead&			ServerChild::Get_HTTPHead() { return HTTP_head_; }
 	const std::string&		ServerChild::Get_body() const { return body_; }
 	const std::string&		ServerChild::Get_path() const { return path_; }
-	const LocationConfig&	ServerChild::Get_location_config() { return location_config_; }
-    const ServerConfig& ServerChild::Get_server_config() { return server_config_; }
+	LocationConfig&		ServerChild::Get_location_config() { return location_config_; }
+	ServerConfig&		ServerChild::Get_server_config() { return server_config_; }
 
 	void	ServerChild::Set_parse_status(HTTPParseStatus parse_status) { parse_status_ = parse_status; }
 	void	ServerChild::Set_response_code(int response_code) { response_code_ = response_code; }
@@ -105,14 +105,16 @@ namespace ft
 		// Find location conf
 		setUp_locationConfig_();
 
+		// validate request method
+		check_method_();
+
 		// return in case of redirect
-		/* check nginx NOOOO /redirect  HTTP/1.1 */
 		if (parse_status_ == complete) {
 			return ;
 		}
 
-		// validate request method
-		check_method_();
+		// use index from config if URI is a directory
+		attach_index();
 
 		/** check IS CGI? **/
 		/*if (HTTP_head_.GetRequestURI().find('?') != std::string::npos) {
@@ -125,7 +127,7 @@ namespace ft
 		decide_parse_status_();
 
 		if (parse_status_ == readStraight) {
-			header_map::iterator content_length = HTTP_head_.GetHeaderFields().find("content-length");
+			header_field_map::iterator content_length = HTTP_head_.GetHeaderFields().find("content-length");
 
           	content_length_ = strBase_to_UI_(content_length->second, std::dec);
            	if (content_length_ > max_body_size_) {
@@ -164,7 +166,7 @@ namespace ft
 	void    ServerChild::setUp_locationConfig_() {
         std::string     httpReqURI = HTTP_head_.GetRequestURI();
         std::string     pathParts;
-        ServerConfig::loc_conf_map				serverLocMap = server_config_.getLocationConfig();
+        ServerConfig::loc_conf_map				serverLocMap = server_config_.getLocationConfigList();
         ServerConfig::loc_conf_map::iterator	locConfIt;
 
         while ((locConfIt = serverLocMap.find(httpReqURI)) == serverLocMap.end() && !httpReqURI.empty()) {
@@ -176,9 +178,6 @@ namespace ft
         if (locConfIt == serverLocMap.end()) {
 			std::cout << "could not find LocationConfig, using default\n";
 			locConfIt = serverLocMap.find("/");
-			if (locConfIt == serverLocMap.end()) {
-				throw_(404, "Not Found - no default server exists");
-			}
         } else {
 			std::cout << "found location config: " + locConfIt->first << std::endl;;
 		}
@@ -186,13 +185,13 @@ namespace ft
         location_config_ = locConfIt->second;
 		if (location_config_.getRedirect().first != LocationConfig::NO_REDIRECT) {
 			if (HTTP_head_.GetRequestMethod() != "GET") {
-				throw_(400, "Redirect only allowed with GET");
+				throw_(501, "Redirect only allowed with GET");
 			}
 			parse_status_ = complete;
 			response_code_ = location_config_.getRedirect().first;
 			path_ = location_config_.getRedirect().second;
 		} else {
-	        path_ = location_config_.getAlias() + pathParts;
+	        path_ = location_config_.getAlias() + location_config_.getUri() + pathParts;
 		}
     }
 
@@ -209,9 +208,36 @@ namespace ft
         }
 	}
 
+	void	ServerChild::attach_index() {
+		std::vector<std::string> indexes = location_config_.getIndex();
+		struct stat sb;
+
+   		if (stat(path_.c_str(), &sb) == -1) {
+			std::cout << "URIII not good\n";
+			if (errno == EACCES)
+				throw_(403, "forbidden - cannot access uri path");
+			else if (errno == ENOENT)
+				throw_(404, "forbidden - path doesn't exist");
+			else {
+				throw_(500, "Internal error - nomem or other");
+			}
+		}
+		if (!S_ISDIR(sb.st_mode))
+			return ;	
+
+		for (std::vector<std::string>::iterator it = indexes.begin(); it != indexes.end(); ++it) {
+			std::string tmp = path_ + "/" + *it;
+			if (stat(tmp.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode)) {
+				continue ;	
+			}
+			path_ += "/" + *it;
+			break ;
+		}
+	}
+
 	void	ServerChild::check_headers_() {
-		header_map headers = HTTP_head_.GetHeaderFields();
-		for (header_map::iterator it = headers.begin(); it != headers.end(); ++it) {
+		header_field_map headers = HTTP_head_.GetHeaderFields();
+		for (header_field_map::iterator it = headers.begin(); it != headers.end(); ++it) {
 			// check for WSP in key
         	if (isspace(it->first[it->first.size() - 1])) {
             	throw_(400, "Bad Request - trailing white space after header key");
@@ -222,7 +248,7 @@ namespace ft
         	}
 			// Check for Trailer
 			if (it->first == "trailer") {
-				throw_(400, "Bad Request - Trailer included");
+				throw_(501, "Not Implemented - Trailer included");
 			}
 			// check transfer-encoding
 			if (it->first == "transfer-encoding" && it->second != "chunked") {
@@ -236,9 +262,9 @@ namespace ft
 	}
 
 	void	ServerChild::decide_parse_status_() {
-		header_map headers = HTTP_head_.GetHeaderFields();
-		header_map::iterator transfer_encoding = headers.find("transfer-encoding");
-        header_map::iterator content_length = headers.find("content-length");
+		header_field_map headers = HTTP_head_.GetHeaderFields();
+		header_field_map::iterator transfer_encoding = headers.find("transfer-encoding");
+        header_field_map::iterator content_length = headers.find("content-length");
 
         if (transfer_encoding != headers.end() && content_length != headers.end()) {
             headers.erase(content_length); 
@@ -335,6 +361,4 @@ namespace ft
             throw_(413, "Payload Too Large");
 		}
 	}
-
-
 } // namespace ft

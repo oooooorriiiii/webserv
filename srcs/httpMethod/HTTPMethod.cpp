@@ -42,44 +42,6 @@
 
 /**
  *
- * @return GMT time in RFC7231 format
- */
-std::string CreateDate() {
-  char date[1024];
-  time_t gmt_time;
-
-  time(&gmt_time);
-  strftime(date, 1024, "%a, %d %b %Y %X %Z", gmtime(&gmt_time)); // RFC7231
-
-  return std::string(date);
-}
-
-/**
- *
- * @param status_code
- * @return
- */
-std::string CreateErrorSentence(int status_code) {
-  std::stringstream error_sentence;
-
-// Error file create
-//  << "<!DOCTYPE html>" << CRLF;
-//  << "<html><head>" << CRLF;
-//  << "<title>Error</title></head>" << CRLF;
-//  << "<body>Error</body>" << CRLF;
-
-  error_sentence << "HTTP/1.1 " << HttpResponse::GetResponseLine(status_code)
-                 << CRLF; // TODO: check status code
-  error_sentence << "Server: " << "42webserv" << "/1.0" << CRLF;
-  error_sentence << "Date: " << CreateDate() << CRLF;
-  error_sentence << "Content-Type: text/html";
-
-  return error_sentence.str();
-}
-
-
-/**
- *
  * @param http_body
  * @param file_path
  * @param response_message_str
@@ -87,7 +49,8 @@ std::string CreateErrorSentence(int status_code) {
  */
 int do_put(std::string &response_message_str,
            const std::string &file_path,
-           const std::string &http_body) {
+           const std::string &http_body,
+           const std::string &connection) {
   int response_status;
   std::stringstream response_message_stream;
 
@@ -101,12 +64,12 @@ int do_put(std::string &response_message_str,
     // file is already exist
     // overwrite
     // 204 No Content
-    response_message_stream << "HTTP/1.1 " << HttpResponse::GetResponseLine(204) << CRLF;
+    response_message_stream << "HTTP/1.1 " << GetResponseLine(204) << CRLF;
     response_status = 204;
   } else {
     // file is new added
     // 201 content created
-    response_message_stream << "HTTP/1.1 " << HttpResponse::GetResponseLine(201) << CRLF;
+    response_message_stream << "HTTP/1.1 " << GetResponseLine(201) << CRLF;
     response_status = 201;
   }
 
@@ -118,6 +81,7 @@ int do_put(std::string &response_message_str,
 
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   response_message_stream << "Date: " << CreateDate() << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF;
 
   response_message_str = response_message_stream.str();
 
@@ -131,7 +95,10 @@ int do_put(std::string &response_message_str,
  * @param response_message_str
  * @return
  */
-int do_get(std::string &response_message_str, const std::string &file_path) {
+int do_get(std::string &response_message_str,
+          const std::string &file_path,
+          const ServerConfig::err_page_map &err_pages,
+          const std::string &connection) {
   int response_status;
   std::stringstream response_message_stream;
 
@@ -140,8 +107,7 @@ int do_get(std::string &response_message_str, const std::string &file_path) {
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_stream << CreateErrorSentence(404);
-    response_message_str = response_message_stream.str();
+    response_message_str = CreateErrorResponse(404, err_pages);
     return (404);
   }
 
@@ -166,6 +132,7 @@ int do_get(std::string &response_message_str, const std::string &file_path) {
   response_message_stream << "Content-Type: " << "text/html" << CRLF;
   // Content-Length:
   response_message_stream << "Content-Length: " << st.st_size << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF;
 
   // send body
   response_message_stream << CRLF;
@@ -188,7 +155,10 @@ int do_get(std::string &response_message_str, const std::string &file_path) {
  * @param response_message_str
  * @return
  */
-int do_delete(std::string &response_message_str, const std::string &file_path) {
+int do_delete(std::string &response_message_str,
+              const std::string &file_path,
+              const ServerConfig::err_page_map &err_pages,
+              const std::string &connection) {
   int response_status;
   std::stringstream response_message_stream;
   std::string delete_dir = "ok";
@@ -207,12 +177,13 @@ int do_delete(std::string &response_message_str, const std::string &file_path) {
     response_message_stream << "HTTP/1.1 204 No Content" << CRLF;
     response_status = 204;
   } else {
-    response_message_stream << "HTTP/1.1 500 Server Error" << CRLF;
-    response_status = 500;
+    response_message_str = CreateErrorResponse(500, err_pages);
+    return (500);
   }
 
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   response_message_stream << "Date: " << CreateDate() << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF;
 
   response_message_str = response_message_stream.str();
   return response_status;
@@ -227,7 +198,9 @@ int do_delete(std::string &response_message_str, const std::string &file_path) {
 int do_CGI(std::string &response_message_str,
            ft::ServerChild server_child,
            std::string file_path,
-           std::string query_string) {
+           std::string query_string,
+           const ServerConfig::err_page_map &err_pages,
+           const std::string &connection) {
   int response_status;
   std::stringstream response_message_stream;
   const int buf_size = 1024;
@@ -242,8 +215,7 @@ int do_CGI(std::string &response_message_str,
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_stream << CreateErrorSentence(404);
-    response_message_str = response_message_stream.str();
+    response_message_str = CreateErrorResponse(404, err_pages);
     return (404);
   }
 
@@ -266,8 +238,7 @@ int do_CGI(std::string &response_message_str,
     cgi.Execute();
   } catch (std::exception &e) {
     // status 500
-    response_message_stream << CreateErrorSentence(500);
-    response_message_str = response_message_stream.str();
+    response_message_str = CreateErrorResponse(500, err_pages); 
     return (500);
   }
   int cgi_out_stream = cgi.GetCgiSocket();
@@ -294,6 +265,7 @@ int do_CGI(std::string &response_message_str,
   response_message_stream << "Last-Modified: " << CreateDate() << CRLF;
   response_message_stream << "Content-Type: " << "text/html" << CRLF;
   response_message_stream << "Content-Length: " << cgi_output.str().size() << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF;
 
   // send body
   response_message_stream << CRLF;
@@ -301,19 +273,5 @@ int do_CGI(std::string &response_message_str,
   response_message_stream << cgi_output.str();
 
   response_message_str = response_message_stream.str();
-  return response_status;
-}
-
-
-/**
- *
- * @param response_message_str
- * @return
- */
-int disallow_method(std::string &response_message_str) {
-  int response_status = 405;
-
-  response_message_str = CreateErrorSentence(response_status);
-
   return response_status;
 }

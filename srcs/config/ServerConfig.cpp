@@ -2,7 +2,7 @@
 
 ServerConfig::ServerConfig()
 	: is_set(), server_name(), listen(), client_max_body_size(),
-	  error_page(), location_config()
+	  error_page(), location_config_list()
 {
 }
 
@@ -16,7 +16,7 @@ ServerConfig::ServerConfig(const ServerConfig& src) {
 	listen = src.listen;
 	client_max_body_size = src.client_max_body_size;
 	error_page = src.error_page;
-	location_config = src.location_config;
+	location_config_list = src.location_config_list;
 }
 
 ServerConfig& ServerConfig::operator=(const ServerConfig& rhs) {
@@ -26,7 +26,7 @@ ServerConfig& ServerConfig::operator=(const ServerConfig& rhs) {
 		listen = rhs.listen;
 		client_max_body_size = rhs.client_max_body_size;
 		error_page = rhs.error_page;
-		location_config = rhs.location_config;
+		location_config_list = rhs.location_config_list;
 	}
 	return (*this);
 }
@@ -63,10 +63,10 @@ void ServerConfig::addErrorPage(const err_page_map &error_page)
 
 void ServerConfig::addLocationConfig(const std::string &path, const LocationConfig location_config)
 {
-	if (this->location_config.find(path) != this->location_config.end()) {
+	if (this->location_config_list.find(path) != this->location_config_list.end()) {
 		throw std::runtime_error("Multiple " + path + " location directives");
 	}
-	this->location_config.insert(std::make_pair(path, location_config));
+	this->location_config_list.insert(std::make_pair(path, location_config));
 }
 
 const std::string &ServerConfig::getServerName() const
@@ -89,9 +89,9 @@ const ServerConfig::err_page_map &ServerConfig::getErrorPage() const
 	return this->error_page;
 }
 
-const ServerConfig::loc_conf_map &ServerConfig::getLocationConfig() const
+const ServerConfig::loc_conf_map &ServerConfig::getLocationConfigList() const
 {
-	return this->location_config;
+	return this->location_config_list;
 }
 
 bool ServerConfig::isSet(E_DirectiveType type)

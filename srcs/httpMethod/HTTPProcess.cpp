@@ -4,7 +4,7 @@
 
 #include <string>
 
-#include "HTTPMethod.hpp"
+#include "HTTPProcess.hpp"
 #include "MethodUtils.hpp"
 
 /**
@@ -15,7 +15,7 @@
  * @author ymori
  *
  */
-std::string http_process(ft::ServerChild server_child) {
+std::string http_process(ft::ServerChild& server_child) {
   std::string response_message_str;
 
   /*
@@ -24,6 +24,8 @@ std::string http_process(ft::ServerChild server_child) {
   const std::string kRequestMethod = server_child.Get_HTTPHead().GetRequestMethod();
   const std::string kFilePath = server_child.Get_path();
   const std::string kHttpBody = server_child.Get_body();
+  ServerConfig::err_page_map err_pages = server_child.Get_server_config().getErrorPage();
+  const std::string connection = get_connection(server_child.Get_HTTPHead().GetHeaderFields());
 
   /*
    * TODO: Check if CGI should be executed.
@@ -33,6 +35,7 @@ std::string http_process(ft::ServerChild server_child) {
   bool is_CGI = false;
   std::string query_string_;
   std::string plane_filepath = get_uri_and_check_CGI(kFilePath, query_string_, is_CGI);
+  int ret;
 
   // TODO: delete. for debug
   std::cerr << "*************************" << std::endl;
@@ -40,23 +43,36 @@ std::string http_process(ft::ServerChild server_child) {
   std::cerr << "plane_filepath:          " << plane_filepath << std::endl;
   std::cerr << "*************************" << std::endl;
   // ***
-
+ 
   if (kRequestMethod == "POST") {
     // Any POST request is CGI
-    do_CGI(response_message_str, server_child, plane_filepath, query_string_);
+    ret = do_CGI(response_message_str, server_child, plane_filepath,
+                query_string_, err_pages, connection);
   } else if (kRequestMethod == "GET") {
     if (is_CGI) {
-      do_CGI(response_message_str, server_child, plane_filepath, query_string_);
+      ret = do_CGI(response_message_str, server_child, plane_filepath,
+                  query_string_, err_pages, connection);
     } else {
-      do_get(response_message_str, plane_filepath);
+      ret = do_get(response_message_str, plane_filepath, err_pages, connection); 
     }
   } else if (kRequestMethod == "PUT") {
-    do_put(response_message_str, plane_filepath, kHttpBody);
+    ret = do_put(response_message_str, plane_filepath, kHttpBody, connection);
   } else if (kRequestMethod == "DELETE") {
-    do_delete(response_message_str, plane_filepath);
+    ret = do_delete(response_message_str, plane_filepath, err_pages, connection);
   } else {
-    disallow_method(response_message_str);
+    response_message_str = CreateErrorResponse(501, err_pages);
+    ret = 501;
   }
 
+  // set the status code to 400 so that socket will close the connection
+  server_child.Set_response_code(connection == "close" ? 400 : ret);
   return response_message_str;
+}
+
+std::string get_connection(const http_header_t& headers) {
+  http_header_t::const_iterator connection = headers.find("connection");
+
+  if (connection == headers.end())
+    return ("keep-alive");
+  return (connection->second == "close" ? "close" : "keep-alive");
 }
