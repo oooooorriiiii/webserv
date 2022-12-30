@@ -37,23 +37,25 @@ namespace ft
 
 		void start_server();
 		void print_server_config();
+		LocationConfig	CreateDfltLocConf();
+		ServerConfig	CreateDfltServConf(const std::string& host, unsigned int port);
 
 	private:
 		Server();
 		Server(const Server& src);
 		Server& operator=(const Server&rhs);
 
-		std::vector<ServerConfig>	server_config_;
+		std::vector<ServerConfig>	server_config_list_;
 		Socket 						socket_;
 		ServerChildMap			serverChild_map_;
 		DefaultServerChildMap	default_serverChild_map_;
 		std::map<int, HTTPRequestPair>	httpRequest_pair_map_;
-		HttpResponse	http_response_;
+		LocationConfig	dfltLocConf;
 
 		void create_serverChild_map_();
 		void import_config_(const std::string config_path);
 		bool recieve_request_();
-		ServerChild&	decide_serverChild_config_(const std::string& host, in_port_t port);
+		ServerChild		decide_serverChild_config_(const std::string& host, in_port_t port);
 		void remove_timeout_clients_();
 		void process_msg_(ServerChild& serverChild, const Socket::RecievedMsg& recieved_msg);
 

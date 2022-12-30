@@ -22,7 +22,7 @@ private:
 	unsigned int listen;
 	unsigned int client_max_body_size;
 	err_page_map error_page;
-	loc_conf_map location_config;
+	loc_conf_map location_config_list;
 
 public:
 	ServerConfig();
@@ -40,7 +40,7 @@ public:
 	unsigned int getListen() const;
 	unsigned int getClientMaxBodySize() const;
 	const err_page_map &getErrorPage() const;
-	const loc_conf_map &getLocationConfig() const;
+	const loc_conf_map &getLocationConfigList() const;
 
 	bool isSet(E_DirectiveType type);
 	void print();

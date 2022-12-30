@@ -20,7 +20,7 @@ namespace ft
 			int status_code;
 			std::string dest_uri;
 		} redirectConf;
-		typedef std::map<std::string, std::string>		header_map;
+		typedef std::map<std::string, std::string>		header_field_map;
 		typedef std::map<const std::string, redirectConf> redir_map;
 
 		ServerChild();
@@ -38,8 +38,8 @@ namespace ft
 		HTTPHead&			Get_HTTPHead();
 		const std::string&		Get_body() const;
 		const std::string&		Get_path() const;
-		const LocationConfig&	Get_location_config();
-        const ServerConfig& Get_server_config();
+		LocationConfig&		Get_location_config();
+        ServerConfig&		Get_server_config();
 
 		void	Set_parse_status(HTTPParseStatus parse_status);
 		void	Set_response_code(int response_code);

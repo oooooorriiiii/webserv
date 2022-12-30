@@ -92,7 +92,11 @@ namespace ft
 			if (setsockopt(sockfd_vec_.back(), SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0)
 				throw SetUpFailException("Error: setsockopt()");
 
-			set_nonblock_(sockfd_vec_.back());
+			try {
+				set_nonblock_(sockfd_vec_.back());
+			} catch (const std::exception& e) {
+				throw SetUpFailException(e.what());
+			}
 
 			fd_to_port_map_[sockfd_vec_.back()] = listenPort;
 
@@ -115,16 +119,24 @@ namespace ft
 
 	Socket::RecievedMsg Socket::recieve_msg()
 	{
-		std::cout << "poll_fd_vec_.size(): " << poll_fd_vec_.size() << std::endl;
-		for (size_t i = 0; i < poll_fd_vec_.size(); ++i) {
-			std::cout << poll_fd_vec_[i].fd << " e" << poll_fd_vec_[i].events << " re" << poll_fd_vec_[i].revents;
-			std::cout << (i < poll_fd_vec_.size() - 1 ? " : " : "");
-		}
-		std::cout << std::endl;
+		
+		print_event_debug();
 
 		int poll_rslt = poll(&poll_fd_vec_[0], poll_fd_vec_.size(), 1000);	
-		if (poll_rslt == -1)
-			throw SetUpFailException("Error: poll()");
+		if (poll_rslt == -1) {
+			// if the particular error is fd > max fd || no available memory
+			// removed the last fd from poll list
+			if (errno == EINVAL || errno == ENOMEM) {
+				int last_fd = poll_fd_vec_.back().fd;
+				// only close if not a port bound fd
+				if (!ft::vecIncludes(sockfd_vec_, last_fd)) {
+					close_fd_(last_fd, poll_fd_vec_.size() - 1);
+					throw closedConnection(last_fd);
+				}
+			}
+			// otherwise, just continue
+			throw NoRecieveMsg();
+		}
 
 		for (size_t i = 0; poll_rslt > 0 && i < poll_fd_vec_.size(); ++i)
 		{
@@ -133,19 +145,19 @@ namespace ft
 			{
 				std::cerr << "POLLERR: " << client.fd << std::endl;	
 				close_fd_(client.fd, i);
-				throw connectionHangUp(client.fd);
+				throw closedConnection(client.fd);
 			}
 			else if ((client.revents & POLLHUP) == POLLHUP)
 			{
 				std::cerr << "POLLHUP: " << client.fd << std::endl;
 				close_fd_(client.fd, i);
-				throw connectionHangUp(client.fd);
+				throw closedConnection(client.fd);
 			}
 			else if ((client.revents & POLLRDHUP) == POLLRDHUP)
 			{
 				std::cerr << "POLLRDHUP: " << client.fd << std::endl;
 				close_fd_(client.fd, i);	
-				throw connectionHangUp(client.fd);
+				throw closedConnection(client.fd);
 			}
 			else if ((client.revents & POLLIN) == POLLIN)
 			{
@@ -169,16 +181,13 @@ namespace ft
 
 				ssize_t sent_num = send(client.fd, msg_to_send.c_str(),
 									   msg_to_send.size(), 0);
-				if (sent_num == -1)
-					throw SetUpFailException("send() system error");
-
-				if (static_cast<size_t>(sent_num) != msg_to_send.size())
+				if (sent_num != -1 && static_cast<size_t>(sent_num) != msg_to_send.size())
 					msg_to_send.erase(0, sent_num);
 				else {
 					msg_to_send_map_.erase(client.fd);
-					if (response_code >= 400) {
-						close_fd_(client.fd, i);
-						throw connectionHangUp(client.fd);
+					if (sent_num == -1 || response_code >= 400) {
+							close_fd_(client.fd, i);
+							throw closedConnection(client.fd);
 					}
 					client.events = POLLIN;
 				}
@@ -229,9 +238,13 @@ namespace ft
 	{
 		int connection = accept(sock_fd, NULL, NULL);
 		if (connection == -1)
-			throw SetUpFailException("Error: accept()");
+			throw NoRecieveMsg();
 
-		set_nonblock_(connection);
+		try {
+			set_nonblock_(connection);
+		} catch (const std::exception& e) {
+			throw serverInternalError(connection);
+		}
 
 		struct pollfd poll_fd;
 		poll_fd.fd = connection;
@@ -252,10 +265,10 @@ namespace ft
 
 		ssize_t recv_ret = recv(connection, buf, BUFFER_SIZE, 0);
 		if (recv_ret == -1)
-			throw SetUpFailException("Error: recv()");
+			throw serverInternalError(connection);
 		if (recv_ret == 0) {
 			close_fd_(connection, i_poll_fd);
-			throw connectionHangUp(connection);
+			throw closedConnection(connection);
 		}
 
 		buf[recv_ret] = '\0';
@@ -264,8 +277,7 @@ namespace ft
 
 	void Socket::close_fd_(const int fd, const int i_poll_fd)
 	{
-		if (close(fd) == -1)
-			SetUpFailException("Error: close()");
+		close(fd);
 		poll_fd_vec_.erase(poll_fd_vec_.begin() + i_poll_fd);
 		used_fd_set_.erase(fd);
 		fd_to_port_map_.erase(fd);
@@ -274,8 +286,7 @@ namespace ft
 	void Socket::closeAllSocket_()
 	{
 		for (size_t i = 0; i < poll_fd_vec_.size(); ++i) {
-			if (close(poll_fd_vec_[i].fd) == -1)
-				SetUpFailException("Error: close()");
+			close(poll_fd_vec_[i].fd);
 		}
 		poll_fd_vec_.clear();
 		used_fd_set_.clear();
@@ -294,10 +305,10 @@ namespace ft
 	{
 		int flags = fcntl(fd, F_GETFL, 0);
 		if (flags == -1)
-			throw SetUpFailException("Error: fcntl()");
+			throw std::runtime_error("Error: setsockopt()");
 		if ((flags & O_NONBLOCK) != O_NONBLOCK) {	
 			if (fcntl(fd, F_SETFL, (flags | O_NONBLOCK)) == -1)
-				throw SetUpFailException("Error: fcntl()");
+				throw std::runtime_error("Error: setsockopt()");
 		}
 	}
 
@@ -325,8 +336,22 @@ namespace ft
 	{
 	}
 
-	Socket::connectionHangUp::connectionHangUp(const int client_id)
+	Socket::closedConnection::closedConnection(const int client_id)
 		: client_id(client_id)
 	{
+	}
+
+	Socket::serverInternalError::serverInternalError(const int client_id)
+		: client_id(client_id)
+	{
+	}
+
+	void Socket::print_event_debug() {
+		std::cout << "poll_fd_vec_.size(): " << poll_fd_vec_.size() << std::endl;
+		for (size_t i = 0; i < poll_fd_vec_.size(); ++i) {
+			std::cout << poll_fd_vec_[i].fd << " e" << poll_fd_vec_[i].events << " re" << poll_fd_vec_[i].revents;
+			std::cout << (i < poll_fd_vec_.size() - 1 ? " : " : "");
+		}
+		std::cout << std::endl;
 	}
 }
