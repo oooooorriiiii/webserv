@@ -213,12 +213,15 @@ namespace ft
 		std::vector<std::string> indexes = location_config_.getIndex();
 		struct stat sb;
 
-        std::string tmp_uri;
+        /*
+         * Get plane file path
+         */
+        std::string plane_uri;
         std::string tmp_query;
         bool        tmp_is_cgi;
-        tmp_uri = get_uri_and_check_CGI(path_, tmp_query, tmp_is_cgi);
+        plane_uri = get_uri_and_check_CGI(path_, tmp_query, tmp_is_cgi);
 
-        if (stat(tmp_uri.c_str(), &sb) == -1) {
+        if (stat(plane_uri.c_str(), &sb) == -1) {
 			std::cout << "URIII not good\n";
 			if (errno == EACCES)
 				throw_(403, "forbidden - cannot access uri path");
