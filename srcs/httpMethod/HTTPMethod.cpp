@@ -192,7 +192,7 @@ int do_get(std::string &response_message_str,
   std::string reading_line_buf;
   reading_file.open(file_path.c_str());
   while (std::getline(reading_file, reading_line_buf))
-    response_message_stream << reading_line_buf << CRLF;
+    response_message_stream << reading_line_buf << '\n';
 
   response_message_str = response_message_stream.str();
   return response_status;
