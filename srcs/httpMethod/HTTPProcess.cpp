@@ -34,13 +34,18 @@ std::string http_process(ft::ServerChild& server_child) {
   /*
    * Get information from ServerChild
    */
-  const std::string kRequestMethod = server_child.Get_HTTPHead().GetRequestMethod();
+  LocationConfig locationConf = server_child.Get_location_config();
+  ft::HTTPHead httpHead = server_child.Get_HTTPHead();
+
+  const std::string kRequestMethod = httpHead.GetRequestMethod();
   const std::string kFilePath = server_child.Get_path();
   const std::string kHttpBody = server_child.Get_body();
   ServerConfig::err_page_map err_pages = server_child.Get_server_config().getErrorPage();
-  const std::string connection = get_connection(server_child.Get_HTTPHead().GetHeaderFields());
-  const std::string kLocationAlias = server_child.Get_location_config().getAlias();
-  const std::string kLocationUri = server_child.Get_location_config().getUri();
+  const std::string connection = get_connection(httpHead.GetHeaderFields());
+  const std::string kLocationAlias = locationConf.getAlias();
+  const std::string kLocationUri = locationConf.getUri();
+  const std::string upload_file_path = locationConf.getUploadFilepath();
+  const std::string upload_file = server_child.Get_path_parts(); // http://host:8080/locConf/<path_parts>
 
 
   /*
@@ -75,7 +80,8 @@ std::string http_process(ft::ServerChild& server_child) {
       ret = do_get(response_message_str, plane_filepath, err_pages, connection); 
     }
   } else if (kRequestMethod == "PUT") {
-    ret = do_put(response_message_str, plane_filepath, kHttpBody, connection);
+    ret = do_put(response_message_str, plane_filepath, kHttpBody,
+                err_pages, connection, upload_file_path + upload_file);
   } else if (kRequestMethod == "DELETE") {
     ret = do_delete(response_message_str, plane_filepath, err_pages, connection);
   } else {

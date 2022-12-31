@@ -50,7 +50,9 @@
 int do_put(std::string &response_message_str,
            const std::string &file_path,
            const std::string &http_body,
-           const std::string &connection) {
+           const ServerConfig::err_page_map &err_pages,
+           const std::string &connection,
+           const std::string &upload_file_path) {
   int response_status;
   std::stringstream response_message_stream;
 
@@ -64,24 +66,73 @@ int do_put(std::string &response_message_str,
     // file is already exist
     // overwrite
     // 204 No Content
-    response_message_stream << "HTTP/1.1 " << GetResponseLine(204) << CRLF;
     response_status = 204;
   } else {
     // file is new added
     // 201 content created
-    response_message_stream << "HTTP/1.1 " << GetResponseLine(201) << CRLF;
-    response_status = 201;
-  }
+    if (errno == ENOENT) {
+      response_status = 201;
+    } else if (errno == EACCES) {
+      response_message_str = CreateErrorResponse(403, err_pages);
+      return (403); 
+    } else {
+      response_message_str = CreateErrorResponse(500, err_pages);
+      return (500); 
+		}
+  } 
 
   // create file
   std::ofstream contents_file;
-  contents_file.open(file_path.c_str());
-  contents_file << http_body;
-  contents_file.close();
+  std::ifstream from_file;
+  std::stringstream   body;
 
+  // try to open requested file
+  contents_file.open(file_path.c_str());
+  if (contents_file.is_open()) { // if all is well
+    // check upload filepath
+    ret_val = stat(upload_file_path.c_str(), &stat_buf);
+    // if upload fille path exists, open and copy contents to requested file
+    if (ret_val == 0 && S_ISREG(stat_buf.st_mode)) {
+      from_file.open(upload_file_path.c_str());
+      if (from_file.is_open()) {
+        contents_file << from_file.rdbuf();
+        // client expects body of new content if status code is 201
+        from_file.seekg(0, from_file.beg);
+        body << from_file.rdbuf();
+      } else {
+        response_message_str = CreateErrorResponse(500, err_pages);
+        return (500); 
+      }
+    } else { // if upload filepath doesn't exist, use body from http request
+      if (errno == ENOENT) {
+        contents_file << http_body;
+        body << http_body;
+      } else if (errno == EACCES) {
+        response_message_str = CreateErrorResponse(403, err_pages);
+        return (403); 
+      } else {
+        response_message_str = CreateErrorResponse(500, err_pages);
+        return (500); 
+		  } 
+    }
+  } else {
+    response_message_str = CreateErrorResponse(500, err_pages);
+    return (500); 
+  }
+  from_file.close();
+  contents_file.close();
+  
+  response_message_stream << "HTTP/1.1 " << GetResponseLine(response_status) << CRLF;
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   response_message_stream << "Date: " << CreateDate() << CRLF;
   response_message_stream << "Connection: " << connection << CRLF;
+
+  if (response_status == 201) { // send content-length header and body for 201
+    response_message_stream << "Content-length: " << body.str().size() << CRLF << CRLF
+                            << body.str();
+  } else {
+    response_message_stream << CRLF;
+  }
 
   response_message_str = response_message_stream.str();
 
