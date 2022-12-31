@@ -7,9 +7,8 @@
 #include "HTTPProcess.hpp"
 #include "MethodUtils.hpp"
 
-bool  is_cgi_dir(const std::string &plane_filepath , const std::string& kLocationAlias, const std::string& kLocationUri) {
+bool  is_cgi_dir(const std::string &plane_filepath , const std::string& kLocationAlias) {
 
-  (void)kLocationUri;
   std::string cgi_dir = kLocationAlias + "/cgi-bin";
   bool is_CGI = false;
 
@@ -54,7 +53,7 @@ std::string http_process(ft::ServerChild& server_child) {
   std::string plane_filepath = get_uri_and_check_CGI(kFilePath, query_string_, is_CGI);
   int ret;
 
-  is_CGI = is_cgi_dir(plane_filepath, kLocationAlias, kLocationUri);
+  is_CGI = is_cgi_dir(plane_filepath, kLocationAlias);
 
   // TODO: delete. for debug
   std::cerr << "*************************" << std::endl;
