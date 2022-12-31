@@ -7,6 +7,19 @@
 #include "HTTPProcess.hpp"
 #include "MethodUtils.hpp"
 
+bool  is_cgi_dir(const std::string &plane_filepath , const std::string& kLocationAlias) {
+
+  std::string cgi_dir = kLocationAlias + "/cgi-bin";
+  bool is_CGI = false;
+
+  if (plane_filepath.find(cgi_dir) != std::string::npos) {
+    is_CGI = true;
+  }
+
+  return is_CGI;
+}
+
+
 /**
  *
  * @param server_child
@@ -26,6 +39,9 @@ std::string http_process(ft::ServerChild& server_child) {
   const std::string kHttpBody = server_child.Get_body();
   ServerConfig::err_page_map err_pages = server_child.Get_server_config().getErrorPage();
   const std::string connection = get_connection(server_child.Get_HTTPHead().GetHeaderFields());
+  const std::string kLocationAlias = server_child.Get_location_config().getAlias();
+  const std::string kLocationUri = server_child.Get_location_config().getUri();
+
 
   /*
    * TODO: Check if CGI should be executed.
@@ -37,10 +53,13 @@ std::string http_process(ft::ServerChild& server_child) {
   std::string plane_filepath = get_uri_and_check_CGI(kFilePath, query_string_, is_CGI);
   int ret;
 
+  is_CGI = is_cgi_dir(plane_filepath, kLocationAlias);
+
   // TODO: delete. for debug
   std::cerr << "*************************" << std::endl;
   std::cerr << "server_child.Get_path(): " << kFilePath << std::endl;
   std::cerr << "plane_filepath:          " << plane_filepath << std::endl;
+  std::cerr << "is_CGI:                  " << is_CGI << std::endl;
   std::cerr << "*************************" << std::endl;
   // ***
  
