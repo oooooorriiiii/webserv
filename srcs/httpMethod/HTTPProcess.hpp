@@ -6,6 +6,7 @@
 #define WEBSERV_SRCS_HTTPMETHOD_HTTPPROCESS_HPP_
 
 #include "HTTPMethod.hpp"
+#include "../HTTP/HTTPHead.hpp"
 
 #include <iostream>
 
