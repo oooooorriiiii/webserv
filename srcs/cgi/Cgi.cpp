@@ -126,7 +126,7 @@ void Cgi::Execute() {
 
   ret_val = socketpair(AF_UNIX, SOCK_STREAM, 0, socket_fds);
   if (ret_val == -1) {
-    throw std::runtime_error("CGI socket error");
+    throw std::runtime_error("CGI error: socket error");
   }
 
   int parent_socket = socket_fds[0];
@@ -138,18 +138,18 @@ void Cgi::Execute() {
    */
   char **argv = (char **)malloc(sizeof(char *) * 3);
   if (argv == NULL) {
-    exit(1);
+    throw std::runtime_error("CGI error: allocation failed");
   }
   argv[0] = strdup(bin_path_.c_str());
   if (argv[0] == NULL) {
     free(argv);
-    exit(1);
+    throw std::runtime_error("CGI error: allocation failed");
   }
   argv[1] = strdup(cgi_path_.c_str());
   if (argv[1] == NULL) {
     free(argv[0]);
     free(argv);
-    exit(1);
+    throw std::runtime_error("CGI error: allocation failed");
   }
   argv[2] = NULL;
 
@@ -160,7 +160,7 @@ void Cgi::Execute() {
   if (pid < 0) { // fork error
     close(parent_socket);
     close(child_socket);
-    throw std::runtime_error("CGI fork error");
+    throw std::runtime_error("CGI error: fork failed");
   }
   if (pid == 0) { // child
     int ret_val_child = 1;
