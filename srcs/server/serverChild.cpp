@@ -4,8 +4,10 @@
 namespace ft
 {
 
-	ServerChild::ServerChild(): server_config_(ServerConfig()), location_config_(), redirectList_map_(), response_code_(),
-		parse_status_(), HTTP_head_(), content_length_(), read_bytes_(), max_body_size_(), body_(), save_(), path_(), hex_bytes_()
+	ServerChild::ServerChild(): server_config_(ServerConfig()), location_config_(),
+		redirectList_map_(), response_code_(), parse_status_(), HTTP_head_(),
+		content_length_(), read_bytes_(), max_body_size_(), body_(), save_(),
+		path_(), path_parts_(), hex_bytes_()
 	{
 	}
 
@@ -14,8 +16,10 @@ namespace ft
 	}
 
 	ServerChild::ServerChild(const ServerConfig &server_config)
-		: server_config_(server_config), location_config_(), redirectList_map_(), response_code_(),
-		parse_status_(), HTTP_head_(), content_length_(), read_bytes_(), max_body_size_(), body_(), save_(), path_(), hex_bytes_()
+		: server_config_(server_config), location_config_(), redirectList_map_(),
+		response_code_(), parse_status_(), HTTP_head_(), content_length_(),
+		read_bytes_(), max_body_size_(), body_(), save_(), path_(), path_parts_(),
+		hex_bytes_()
 	{
 		ServerConfig::loc_conf_map::const_iterator itend = server_config.getLocationConfigList().end();
 		for (ServerConfig::loc_conf_map::const_iterator it = server_config.getLocationConfigList().begin(); it != itend; ++it)
@@ -45,6 +49,7 @@ namespace ft
 		body_ = src.body_;
 		save_ = src.save_;
 		path_ = src.path_;
+		path_parts_ = src.path_parts_;
 		hex_bytes_ = src.hex_bytes_;
 	}
 
@@ -62,6 +67,7 @@ namespace ft
 			body_ = rhs.body_;
 			save_ = rhs.save_;
 			path_ = rhs.path_;	
+			path_parts_ = rhs.path_parts_;
 			hex_bytes_ = rhs.hex_bytes_;
 		}
 		return (*this);
@@ -87,6 +93,7 @@ namespace ft
 	HTTPHead&			ServerChild::Get_HTTPHead() { return HTTP_head_; }
 	const std::string&		ServerChild::Get_body() const { return body_; }
 	const std::string&		ServerChild::Get_path() const { return path_; }
+	const std::string&		ServerChild::Get_path_parts() const { return path_parts_; }
 	LocationConfig&		ServerChild::Get_location_config() { return location_config_; }
 	ServerConfig&		ServerChild::Get_server_config() { return server_config_; }
 
@@ -166,13 +173,12 @@ namespace ft
 
 	void    ServerChild::setUp_locationConfig_() {
         std::string     httpReqURI = HTTP_head_.GetRequestURI();
-        std::string     pathParts;
         ServerConfig::loc_conf_map				serverLocMap = server_config_.getLocationConfigList();
         ServerConfig::loc_conf_map::iterator	locConfIt;
 
         while ((locConfIt = serverLocMap.find(httpReqURI)) == serverLocMap.end() && !httpReqURI.empty()) {
             size_t i =  httpReqURI.find_last_of('/');
-            pathParts.insert(0, httpReqURI.substr(i)); // from index to npos
+            path_parts_.insert(0, httpReqURI.substr(i)); // from index to npos
             httpReqURI.erase(i); // from index to npos
         }
  
@@ -192,7 +198,7 @@ namespace ft
 			response_code_ = location_config_.getRedirect().first;
 			path_ = location_config_.getRedirect().second;
 		} else {
-	        path_ = location_config_.getAlias() + location_config_.getUri() + pathParts;
+	        path_ = location_config_.getAlias() + location_config_.getUri() + path_parts_;
 		}
     }
 
@@ -211,6 +217,10 @@ namespace ft
 
 	void	ServerChild::attach_index() {
 		std::vector<std::string> indexes = location_config_.getIndex();
+		bool needExistingFile = 
+			HTTP_head_.GetRequestMethod() == "GET"
+			|| HTTP_head_.GetRequestMethod() == "DELETE" ?
+				true : false;
 		struct stat sb;
 
         /*
@@ -222,11 +232,13 @@ namespace ft
         plane_uri = get_uri_and_check_CGI(path_, tmp_query, tmp_is_cgi);
 
         if (stat(plane_uri.c_str(), &sb) == -1) {
-			std::cout << "URIII not good\n";
+			std::cout << "ERNO: " << errno << std::endl;
 			if (errno == EACCES)
 				throw_(403, "forbidden - cannot access uri path");
-			else if (errno == ENOENT)
-				throw_(404, "forbidden - path doesn't exist");
+			else if (errno == ENOENT) {
+				if (needExistingFile)// PUT & POST can be ENOENT
+					throw_(404, "NotFound - path doesn't exist");
+			}
 			else {
 				throw_(500, "Internal error - nomem or other");
 			}

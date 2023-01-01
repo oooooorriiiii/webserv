@@ -18,7 +18,10 @@ int return1();
 int do_put(std::string &response_message_str,
            const std::string &file_path,
            const std::string &http_body,
-           const std::string &connection);
+           const ServerConfig::err_page_map &err_pages,
+           const std::string &connection,
+           const std::string &upload_file_path);
+
 
 int do_get(std::string &response_message_str,
             const std::string &file_path,
