@@ -125,6 +125,29 @@ void Cgi::Execute() {
   int parent_socket = socket_fds[0];
   int child_socket = socket_fds[1];
 
+  /*
+   * Create argv
+   */
+  char **argv = (char **)malloc(sizeof(char *) * 3);
+  if (argv == NULL) {
+    exit(1);
+  }
+  argv[0] = strdup(bin_path_.c_str());
+  if (argv[0] == NULL) {
+    free(argv);
+    exit(1);
+  }
+  argv[1] = strdup(cgi_path_.c_str());
+  if (argv[1] == NULL) {
+    free(argv[0]);
+    free(argv);
+    exit(1);
+  }
+  argv[2] = NULL;
+
+  /*
+   * Create child process
+   */
   pid_t pid = fork();
   if (pid < 0) { // fork error
     close(parent_socket);
@@ -151,7 +174,6 @@ void Cgi::Execute() {
       exit(ret_val_child);
     }
 
-
     /*
      * Change directory
      */
@@ -160,25 +182,6 @@ void Cgi::Execute() {
       exit(ret_val_child);
     }
 
-    /*
-     * Create argv
-     */
-    char **argv = (char **)malloc(sizeof(char *) * 3);
-    if (argv == NULL) {
-      exit(1);
-    }
-    argv[0] = strdup(bin_path_.c_str());
-    if (argv[0] == NULL) {
-      free(argv);
-      exit(1);
-    }
-    argv[1] = strdup(cgi_path_.c_str());
-    if (argv[1] == NULL) {
-      free(argv[0]);
-      free(argv);
-      exit(1);
-    }
-    argv[2] = NULL;
 
     /*
      * Execution CGI
@@ -187,12 +190,15 @@ void Cgi::Execute() {
     ret_val_child = execve(bin_path_.c_str(), argv, environ);
     perror("execve failed");
 
-    free(argv[0]);
-    free(argv[1]);
-    free(argv);
-
     exit(ret_val_child);
   }
+
+  /*
+   * free argv for execve
+   */
+  free(argv[0]);
+  free(argv[1]);
+  free(argv);
 
   // Set cgi socket
   cgi_socket_ = parent_socket;
