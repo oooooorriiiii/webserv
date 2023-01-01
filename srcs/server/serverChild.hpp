@@ -42,6 +42,7 @@ namespace ft
 		HTTPHead&			Get_HTTPHead();
 		const std::string&		Get_body() const;
 		const std::string&		Get_path() const;
+		const std::string&		Get_path_parts() const;
 		LocationConfig&		Get_location_config();
         ServerConfig&		Get_server_config();
 
@@ -64,6 +65,7 @@ namespace ft
 		std::string		body_;
 		std::string		save_;
 		std::string		path_;
+		std::string		path_parts_;
 		unsigned int	hex_bytes_;
 
     	unsigned int	strBase_to_UI_(const std::string& str, std::ios_base& (*base)(std::ios_base&));
