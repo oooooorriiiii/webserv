@@ -51,6 +51,7 @@ namespace ft
 		DefaultServerChildMap	default_serverChild_map_;
 		std::map<int, HTTPRequestPair>	httpRequest_pair_map_;
 		LocationConfig	dfltLocConf;
+		int				cgi_fd;
 
 		void create_serverChild_map_();
 		void import_config_(const std::string config_path);
@@ -58,6 +59,7 @@ namespace ft
 		ServerChild		decide_serverChild_config_(const std::string& host, in_port_t port);
 		void remove_timeout_clients_();
 		void process_msg_(ServerChild& serverChild, const Socket::RecievedMsg& recieved_msg);
+		void send_cgi_msg_(int client_id, const std::string& content, const std::string& connection);
 
 		void print_debug_(const Socket::RecievedMsg& recieved_msg);
 

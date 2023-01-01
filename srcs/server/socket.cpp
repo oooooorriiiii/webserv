@@ -169,7 +169,17 @@ namespace ft
 				}
 				else
 				{
-					register_new_client_(client.fd);
+					int connection = accept(client.fd, NULL, NULL);
+					if (connection == -1)
+						throw NoRecieveMsg();
+
+					try {
+						set_nonblock_(connection);
+					} catch (const std::exception& e) {
+						throw serverInternalError(connection);
+					}
+					register_new_client_(connection);
+					fd_to_port_map_[connection] = fd_to_port_map_[client.fd];
 					throw recieveMsgFromNewClient(*(--used_fd_set_.end()));
 				}
 			}
@@ -234,18 +244,8 @@ namespace ft
 		return(closedfd_vec_);
 	}
 
-	void Socket::register_new_client_(int sock_fd)
+	void Socket::register_new_client_(int connection)
 	{
-		int connection = accept(sock_fd, NULL, NULL);
-		if (connection == -1)
-			throw NoRecieveMsg();
-
-		try {
-			set_nonblock_(connection);
-		} catch (const std::exception& e) {
-			throw serverInternalError(connection);
-		}
-
 		struct pollfd poll_fd;
 		poll_fd.fd = connection;
 		poll_fd.events = POLLIN;
@@ -254,7 +254,6 @@ namespace ft
 		used_fd_set_.insert(connection);
 
 		last_recieve_time_map_[connection] = time(NULL);
-		fd_to_port_map_[connection] = fd_to_port_map_[sock_fd];
 	}
 
 	Socket::RecievedMsg Socket::recieve_msg_from_connected_client_(int connection, size_t i_poll_fd)
@@ -274,6 +273,15 @@ namespace ft
 		buf[recv_ret] = '\0';
 		return (RecievedMsg(std::string(buf), connection, fd_to_port_map_[connection]));
 	}
+
+	void Socket::remove_cgi_fd(int fd) {
+		size_t index = 0;
+		for (; index < poll_fd_vec_.size() && poll_fd_vec_[index].fd != fd; ++index) { ; }
+		std::cout << "REMOVING FD: " << poll_fd_vec_[index].fd << std::endl;
+		poll_fd_vec_.erase(poll_fd_vec_.begin() + index);
+		used_fd_set_.erase(fd);
+	}
+
 
 	void Socket::close_fd_(const int fd, const int i_poll_fd)
 	{
@@ -343,6 +351,11 @@ namespace ft
 
 	Socket::serverInternalError::serverInternalError(const int client_id)
 		: client_id(client_id)
+	{
+	}
+
+	Socket::readCGIfd::readCGIfd(const int cgi_fd)
+		: cgi_fd(cgi_fd)
 	{
 	}
 

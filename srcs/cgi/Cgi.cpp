@@ -117,21 +117,25 @@ void Cgi::Execute() {
   int ret_val;
   int socket_fds[2];
 
+  std::cout << "A\n";
   ret_val = socketpair(AF_UNIX, SOCK_STREAM, 0, socket_fds);
   if (ret_val == -1) {
     throw std::runtime_error("CGI socket error");
   }
-
+  std::cout << "B\n";
   int parent_socket = socket_fds[0];
   int child_socket = socket_fds[1];
-
+  std::cout << "C\n";
   pid_t pid = fork();
   if (pid < 0) { // fork error
+    std::cout << "D\n";
     close(parent_socket);
     close(child_socket);
     throw std::runtime_error("CGI fork error");
   }
+  std::cout << "E\n";
   if (pid == 0) { // child
+    std::cerr << "F\n";
     int ret_val_child = 1;
 
     Cgi::CreateEnvMap();
@@ -184,6 +188,9 @@ void Cgi::Execute() {
      * Execution CGI
      */
     errno = 0;
+    std::cerr << "bin: " << bin_path_ << std::endl;
+    std::cerr << "argv[0]" << argv[0] << std::endl;
+
     ret_val_child = execve(bin_path_.c_str(), argv, environ);
     perror("execve failed");
 

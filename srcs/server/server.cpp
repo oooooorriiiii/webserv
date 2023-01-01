@@ -4,7 +4,7 @@
 namespace ft
 {
 	Server::Server(const std::string config_path) : server_config_list_(), socket_(),
-		serverChild_map_(), default_serverChild_map_(), httpRequest_pair_map_()
+		serverChild_map_(), default_serverChild_map_(), httpRequest_pair_map_(), cgi_fd(-1)
 	{
 		import_config_(config_path);
 		socket_.setup(server_config_list_);
@@ -88,9 +88,18 @@ namespace ft
 			recieved_msg = socket_.recieve_msg();
 
 			print_debug_(recieved_msg);
-	
+
 			ServerChild& serverChild = httpRequest_pair_map_[recieved_msg.client_id].second;
 
+			if (recieved_msg.client_id == cgi_fd) {	
+				std::cout << "YAY it worked\n~~~~~~~~~~~~~~~~~~~~~";
+				std::cout << "SENDING TO FD: " << cgi_fd << std::endl;
+				std::string connection = get_connection(serverChild.Get_HTTPHead().GetHeaderFields());
+				send_cgi_msg_(recieved_msg.client_id, recieved_msg.content, connection);
+				httpRequest_pair_map_.erase(recieved_msg.client_id);
+				cgi_fd = -1;
+				return false;
+			}
 			process_msg_(serverChild, recieved_msg);
 
 			if (serverChild.Get_parse_status() == complete) {
@@ -127,6 +136,11 @@ namespace ft
 		catch (const ft::Socket::closedConnection &deleted_client)
 		{
 			httpRequest_pair_map_.erase(deleted_client.client_id);
+		}
+		catch (const ft::Socket::readCGIfd &readCGIexc)
+		{
+			socket_.register_new_client_(readCGIexc.cgi_fd);
+			cgi_fd = readCGIexc.cgi_fd;
 		}
 		catch (const ft::Socket::NoRecieveMsg &e)
 		{
@@ -204,6 +218,32 @@ namespace ft
 			serverConf.addLocationConfig(dfltLocConf.getUri(), dfltLocConf);
 		return (server_child);
 	}	
+
+	void Server::send_cgi_msg_(int client_id, const std::string& content, const std::string& connection) {
+  		/*
+   		* Create response header
+   		*/
+		int response_status;
+  		std::stringstream response_message_stream;
+		std::string response_message_str;
+
+  		response_message_stream << "HTTP/1.1 200 OK" << CRLF;
+  		response_status = 200;
+  		response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
+  		response_message_stream << "Date: " << CreateDate() << CRLF;
+  		response_message_stream << "Last-Modified: " << CreateDate() << CRLF;
+  		response_message_stream << "Content-Type: " << "text/html" << CRLF;
+  		response_message_stream << "Content-Length: " << content.size() << CRLF;
+  		response_message_stream << "Connection: " << connection << CRLF;
+
+	  	// send body
+	  	response_message_stream << CRLF;
+
+		response_message_stream << content;
+
+		response_message_str = response_message_stream.str();
+        socket_.send_msg(client_id, response_status, response_message_str);
+	}
 
 	void Server::print_server_config() {
 		for (std::vector<ServerConfig>::iterator it = server_config_list_.begin(); it != server_config_list_.end(); ++it) {

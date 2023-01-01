@@ -66,11 +66,11 @@ std::string http_process(ft::ServerChild& server_child) {
   if (kRequestMethod == "POST") {
     // Any POST request is CGI
     ret = do_CGI(response_message_str, server_child, plane_filepath,
-                query_string_, err_pages, connection);
+                query_string_, err_pages);
   } else if (kRequestMethod == "GET") {
     if (is_CGI) {
       ret = do_CGI(response_message_str, server_child, plane_filepath,
-                  query_string_, err_pages, connection);
+                  query_string_, err_pages);
     } else {
       ret = do_get(response_message_str, plane_filepath, err_pages, connection); 
     }
