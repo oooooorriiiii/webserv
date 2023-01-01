@@ -18,6 +18,7 @@
 #include <sys/socket.h>
 #include <cstdio>
 #include <sys/wait.h>
+#include <sys/time.h>
 #include "Cgi.hpp"
 
 Cgi::Cgi(ft::ServerChild server_child,
@@ -104,6 +105,12 @@ int Cgi::change_fd(int from, int to) {
   return ret_val;
 }
 
+void  cgi_timeout_handler(int signum) {
+  (void)signum;
+
+  exit(1);
+}
+
 /**
  * @brief Execute CGI.
  *
@@ -124,6 +131,7 @@ void Cgi::Execute() {
 
   int parent_socket = socket_fds[0];
   int child_socket = socket_fds[1];
+
 
   /*
    * Create argv
@@ -161,6 +169,17 @@ void Cgi::Execute() {
     Cgi::SetEnv();
 
     close(parent_socket);
+
+    /*
+     * Set timeout
+     */
+    struct itimerval itimerval = {};
+    itimerval.it_value.tv_sec = 5; // timeout sec
+    itimerval.it_value.tv_usec = 0;
+    itimerval.it_interval.tv_sec = 0;
+    itimerval.it_interval.tv_usec = 0;
+    signal(SIGALRM, cgi_timeout_handler);
+    setitimer(ITIMER_REAL, &itimerval, NULL);
 
     /*
      * Connect STDIN and STDOUT to the file descriptor of a socket.
