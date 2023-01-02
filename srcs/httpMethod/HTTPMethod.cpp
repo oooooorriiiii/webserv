@@ -234,7 +234,7 @@ int do_delete(std::string &response_message_str,
 
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   response_message_stream << "Date: " << CreateDate() << CRLF;
-  response_message_stream << "Connection: " << connection << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF << CRLF;
 
   response_message_str = response_message_stream.str();
   return response_status;
