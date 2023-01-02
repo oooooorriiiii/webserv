@@ -21,6 +21,7 @@
 #include <map>
 #include <algorithm>
 #include <fcntl.h>
+#include <sstream>
 
 #include "../config/Config.hpp"
 #include "../utils/utils.hpp"
@@ -57,8 +58,7 @@ namespace ft
 		void send_msg(int fd, unsigned int response_code, const std::string msg);
 		std::vector<int>& check_keep_time_and_close_fd();
 		void close_fd_(const int fd, const int i_poll_fd);
-		void register_new_client_(int sock_fd);
-		void remove_cgi_fd(int fd);
+		void register_new_client_(int fd, bool is_cgi);
 
 		class SetUpFailException : public std::exception
 		{
@@ -92,15 +92,15 @@ namespace ft
 		class serverInternalError : public std::exception
 		{
 		public:
-			serverInternalError(const int client_id);
-			const int client_id;
+			serverInternalError(const int fd);
+			const int fd_;
 		};
 
 		class readCGIfd : public std::exception
 		{
 		public:
 			readCGIfd(const int cgi_fd);
-			const int cgi_fd;
+			const int cgi_fd_;
 		};
 
 		class NoRecieveMsg : public std::exception
@@ -121,8 +121,10 @@ namespace ft
 		std::set<int> used_fd_set_;
 
 		time_t keep_connect_time_len_;
+		int cgi_;
 
-		RecievedMsg recieve_msg_from_connected_client_(int connection, size_t i_poll_fd);
+		RecievedMsg recieve_msg_from_connected_client_(int client_fd, size_t i_poll_fd);
+		RecievedMsg recieve_msg_from_cgi_(int cgi_fd, size_t i_poll_fd);
 	
 		void closeAllSocket_();
 		void set_sockaddr_(struct sockaddr_in &server_sockaddr, const char *ip, const in_port_t port);

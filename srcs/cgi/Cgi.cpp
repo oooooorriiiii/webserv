@@ -36,8 +36,9 @@ Cgi::Cgi(ft::ServerChild server_child,
 {
 }
 
-Cgi::~Cgi() {
-  close(cgi_socket_);
+Cgi::~Cgi() { 
+  // the cgi_socket will be close in
+  // Socket::recieve_msg_from_cgi_()
 }
 
 /**
@@ -207,6 +208,7 @@ void Cgi::Execute() {
   if (WEXITSTATUS(status) != 0) {
     std::cerr << "The child process exited with an error" << std::endl;
     close(child_socket);
+    close(parent_socket);
     throw std::runtime_error("CGI process failed");
   }
 // if to output log

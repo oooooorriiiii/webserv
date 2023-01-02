@@ -4,7 +4,8 @@
 namespace ft
 {
 	Server::Server(const std::string config_path) : server_config_list_(), socket_(),
-		serverChild_map_(), default_serverChild_map_(), httpRequest_pair_map_(), cgi_fd(-1)
+		serverChild_map_(), default_serverChild_map_(), httpRequest_pair_map_(),
+		cgi_client_socket_(std::make_pair(-1, -1))
 	{
 		import_config_(config_path);
 		socket_.setup(server_config_list_);
@@ -19,9 +20,7 @@ namespace ft
 	{
 		while (1)
 		{
-			if (recieve_request_())
-			{
-			}
+			recieve_request_();	
 		}
 	}
 
@@ -76,30 +75,24 @@ namespace ft
 		}
 	}	
 
-	bool Server::recieve_request_()
+	void Server::recieve_request_()
 	{
 		Socket::RecievedMsg recieved_msg;
 		unsigned int		response_code;
 		std::string			response;
 
 		try
-		{	
+		{
 			remove_timeout_clients_();
+
 			recieved_msg = socket_.recieve_msg();
 
 			print_debug_(recieved_msg);
 
-			ServerChild& serverChild = httpRequest_pair_map_[recieved_msg.client_id].second;
+			if (handle_cgi(recieved_msg))
+				return ;
 
-			if (recieved_msg.client_id == cgi_fd) {	
-				std::cout << "YAY it worked\n~~~~~~~~~~~~~~~~~~~~~";
-				std::cout << "SENDING TO FD: " << cgi_fd << std::endl;
-				std::string connection = get_connection(serverChild.Get_HTTPHead().GetHeaderFields());
-				send_cgi_msg_(recieved_msg.client_id, recieved_msg.content, connection);
-				httpRequest_pair_map_.erase(recieved_msg.client_id);
-				cgi_fd = -1;
-				return false;
-			}
+			ServerChild& serverChild = httpRequest_pair_map_[recieved_msg.client_id].second;
 			process_msg_(serverChild, recieved_msg);
 
 			if (serverChild.Get_parse_status() == complete) {
@@ -126,8 +119,6 @@ namespace ft
                 socket_.send_msg(recieved_msg.client_id, response_code, response);
 				httpRequest_pair_map_.erase(recieved_msg.client_id);
 			}
-
-			return (true);
 		}
 		catch (const ft::Socket::recieveMsgFromNewClient &new_client)
 		{
@@ -139,22 +130,36 @@ namespace ft
 		}
 		catch (const ft::Socket::readCGIfd &readCGIexc)
 		{
-			socket_.register_new_client_(readCGIexc.cgi_fd);
-			cgi_fd = readCGIexc.cgi_fd;
+			socket_.register_new_client_(readCGIexc.cgi_fd_, true);
+			// client socket fd
+			cgi_client_socket_.first = recieved_msg.client_id;
+			// cgi socket fd
+			cgi_client_socket_.second = readCGIexc.cgi_fd_;
 		}
 		catch (const ft::Socket::NoRecieveMsg &e)
 		{
 			std::cerr << "no msg recieved" << std::endl;
 		}
-		catch (const ft::Socket::serverInternalError &client_id)
+		catch (const ft::Socket::serverInternalError &srvrExc)
 		{	
-			ServerChild& serverChild = httpRequest_pair_map_[recieved_msg.client_id].second;
+			int client_fd = srvrExc.fd_;
+
+			// The client_fd will be the fd received in the exception
+			// except when that fd is the cgi_fd
+			// the cgi_fd is already closed now, so we need to send the message to 
+			// the client who originally requested the cgi operation
+			// (cgi_client_socker.first)
+			if (client_fd == cgi_client_socket_.second) { // cgi_fd
+				client_fd = cgi_client_socket_.first; // client_fd
+				cgi_client_socket_.first = -1;
+				cgi_client_socket_.second = -1;
+			}
+
+			ServerChild& serverChild = httpRequest_pair_map_[client_fd].second;
 			ServerConfig::err_page_map error_pages = serverChild.Get_server_config().getErrorPage();
 
-            socket_.send_msg(client_id.client_id, 500, CreateErrorResponse(500, error_pages));
+            socket_.send_msg(client_fd, 500, CreateErrorResponse(500, error_pages));
 		}
-
-		return (false);
 	}
 
 	void Server::remove_timeout_clients_() {
@@ -163,6 +168,28 @@ namespace ft
 			httpRequest_pair_map_.erase(*it);
 		}
 		closedfd_vec.clear();
+	}
+
+	bool Server::handle_cgi(const Socket::RecievedMsg& recieved_msg) {
+		int client_fd = cgi_client_socket_.first; 
+		int cgi_fd = cgi_client_socket_.second; 
+	
+		// return false if this is not cgi_fd
+		if (recieved_msg.client_id != cgi_fd) 
+			return (false);
+
+		// get connection information of the original client_fd
+		ServerChild& serverChild = httpRequest_pair_map_[client_fd].second;
+		std::string connection = get_connection(serverChild.Get_HTTPHead().GetHeaderFields());
+
+		// send message read with HANGUP to original client
+		send_cgi_msg_(client_fd, recieved_msg.content, connection);
+
+		// prepare for new request to come in from the client
+		httpRequest_pair_map_.erase(client_fd);
+		cgi_client_socket_.first = -1;
+		cgi_client_socket_.second = -1;
+		return (true);
 	}
 				
 	void	Server::process_msg_(ServerChild& serverChild, const Socket::RecievedMsg& recieved_msg) {
@@ -228,7 +255,7 @@ namespace ft
 		std::string response_message_str;
 
   		response_message_stream << "HTTP/1.1 200 OK" << CRLF;
-  		response_status = 200;
+  		response_status = connection == "close" ? 400 : 200;
   		response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   		response_message_stream << "Date: " << CreateDate() << CRLF;
   		response_message_stream << "Last-Modified: " << CreateDate() << CRLF;
