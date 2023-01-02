@@ -34,7 +34,7 @@ Cgi::Cgi(ft::ServerChild server_child,
       bin_path_(server_child.Get_location_config().getCgiExtension().second),
       server_name_(server_child.Get_server_config().getServerName()),
       server_port_(server_child.Get_server_config().getListen())
-{
+      {
 }
 
 Cgi::~Cgi() { 
