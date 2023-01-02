@@ -163,7 +163,6 @@ void Cgi::Execute() {
     close(child_socket);
     throw std::runtime_error("CGI error: fork failed");
   }
-
   if (pid == 0) { // child
     int ret_val_child = 1;
 
@@ -208,9 +207,6 @@ void Cgi::Execute() {
      * Execution CGI
      */
     errno = 0;
-    std::cerr << "bin: " << bin_path_ << std::endl;
-    std::cerr << "argv[0]" << argv[0] << std::endl;
-
     ret_val_child = execve(bin_path_.c_str(), argv, environ);
     perror("execve failed");
 
