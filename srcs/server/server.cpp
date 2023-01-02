@@ -89,6 +89,7 @@ namespace ft
 
 			print_debug_(recieved_msg);
 
+			// return from this loop if cgi message has been sent
 			if (handle_cgi(recieved_msg))
 				return ;
 
@@ -182,7 +183,7 @@ namespace ft
 		ServerChild& serverChild = httpRequest_pair_map_[client_fd].second;
 		std::string connection = get_connection(serverChild.Get_HTTPHead().GetHeaderFields());
 
-		// send message read with HANGUP to original client
+		// send message that was read with poll->revent == HANGUP to original client
 		send_cgi_msg_(client_fd, recieved_msg.content, connection);
 
 		// prepare for new request to come in from the client

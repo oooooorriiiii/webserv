@@ -253,7 +253,6 @@ int do_CGI(std::string &response_message_str,
            const ServerConfig::err_page_map &err_pages) {
   std::stringstream response_message_stream;
 
-  std::cout << "HELLO\n";
   /*
    * Check to exist file
    * FIXME: GETと同じことをしている．
