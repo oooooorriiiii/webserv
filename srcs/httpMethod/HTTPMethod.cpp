@@ -290,7 +290,7 @@ int do_CGI(std::string &response_message_str,
     return (500);
   }
 
-  // get contents from poll
   std::cout << ":D ~~~~ throwing for: " << cgi.GetCgiSocket() << std::endl;
+  // get contents by using poll
   throw ft::Socket::readCGIfd(cgi.GetCgiSocket());
 }
