@@ -33,7 +33,7 @@ Cgi::Cgi(ft::ServerChild server_child,
       bin_path_(server_child.Get_location_config().getCgiExtension().second),
       server_name_(server_child.Get_server_config().getServerName()),
       server_port_(server_child.Get_server_config().getListen())
-      {
+{
 }
 
 Cgi::~Cgi() {
@@ -117,25 +117,22 @@ void Cgi::Execute() {
   int ret_val;
   int socket_fds[2];
 
-  std::cout << "A\n";
   ret_val = socketpair(AF_UNIX, SOCK_STREAM, 0, socket_fds);
   if (ret_val == -1) {
     throw std::runtime_error("CGI socket error");
   }
-  std::cout << "B\n";
+
   int parent_socket = socket_fds[0];
   int child_socket = socket_fds[1];
-  std::cout << "C\n";
+
   pid_t pid = fork();
   if (pid < 0) { // fork error
-    std::cout << "D\n";
     close(parent_socket);
     close(child_socket);
     throw std::runtime_error("CGI fork error");
   }
-  std::cout << "E\n";
+
   if (pid == 0) { // child
-    std::cerr << "F\n";
     int ret_val_child = 1;
 
     Cgi::CreateEnvMap();
