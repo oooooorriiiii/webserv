@@ -2,7 +2,10 @@
 
 
 def main():
-    print('Hello, World!')
+    print('inf loop\n')
+    while True:
+        print("inf")
+
 
 
 

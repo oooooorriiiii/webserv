@@ -18,6 +18,7 @@
 #include <sys/socket.h>
 #include <cstdio>
 #include <sys/wait.h>
+#include <sys/time.h>
 #include "Cgi.hpp"
 
 Cgi::Cgi(ft::ServerChild server_child,
@@ -105,6 +106,12 @@ int Cgi::change_fd(int from, int to) {
   return ret_val;
 }
 
+void  cgi_timeout_handler(int signum) {
+  (void)signum;
+
+  exit(1);
+}
+
 /**
  * @brief Execute CGI.
  *
@@ -120,17 +127,41 @@ void Cgi::Execute() {
 
   ret_val = socketpair(AF_UNIX, SOCK_STREAM, 0, socket_fds);
   if (ret_val == -1) {
-    throw std::runtime_error("CGI socket error");
+    throw std::runtime_error("CGI error: socket error");
   }
 
   int parent_socket = socket_fds[0];
   int child_socket = socket_fds[1];
 
+
+  /*
+   * Create argv
+   */
+  char **argv = (char **)malloc(sizeof(char *) * 3);
+  if (argv == NULL) {
+    throw std::runtime_error("CGI error: allocation failed");
+  }
+  argv[0] = strdup(bin_path_.c_str());
+  if (argv[0] == NULL) {
+    free(argv);
+    throw std::runtime_error("CGI error: allocation failed");
+  }
+  argv[1] = strdup(cgi_path_.c_str());
+  if (argv[1] == NULL) {
+    free(argv[0]);
+    free(argv);
+    throw std::runtime_error("CGI error: allocation failed");
+  }
+  argv[2] = NULL;
+
+  /*
+   * Create child process
+   */
   pid_t pid = fork();
   if (pid < 0) { // fork error
     close(parent_socket);
     close(child_socket);
-    throw std::runtime_error("CGI fork error");
+    throw std::runtime_error("CGI error: fork failed");
   }
 
   if (pid == 0) { // child
@@ -140,6 +171,17 @@ void Cgi::Execute() {
     Cgi::SetEnv();
 
     close(parent_socket);
+
+    /*
+     * Set timeout
+     */
+    struct itimerval itimerval = {};
+    itimerval.it_value.tv_sec = 5; // timeout sec
+    itimerval.it_value.tv_usec = 0;
+    itimerval.it_interval.tv_sec = 0;
+    itimerval.it_interval.tv_usec = 0;
+    signal(SIGALRM, cgi_timeout_handler);
+    setitimer(ITIMER_REAL, &itimerval, NULL);
 
     /*
      * Connect STDIN and STDOUT to the file descriptor of a socket.
@@ -153,7 +195,6 @@ void Cgi::Execute() {
       exit(ret_val_child);
     }
 
-
     /*
      * Change directory
      */
@@ -162,25 +203,6 @@ void Cgi::Execute() {
       exit(ret_val_child);
     }
 
-    /*
-     * Create argv
-     */
-    char **argv = (char **)malloc(sizeof(char *) * 3);
-    if (argv == NULL) {
-      exit(1);
-    }
-    argv[0] = strdup(bin_path_.c_str());
-    if (argv[0] == NULL) {
-      free(argv);
-      exit(1);
-    }
-    argv[1] = strdup(cgi_path_.c_str());
-    if (argv[1] == NULL) {
-      free(argv[0]);
-      free(argv);
-      exit(1);
-    }
-    argv[2] = NULL;
 
     /*
      * Execution CGI
@@ -192,12 +214,15 @@ void Cgi::Execute() {
     ret_val_child = execve(bin_path_.c_str(), argv, environ);
     perror("execve failed");
 
-    free(argv[0]);
-    free(argv[1]);
-    free(argv);
-
     exit(ret_val_child);
   }
+
+  /*
+   * free argv for execve
+   */
+  free(argv[0]);
+  free(argv[1]);
+  free(argv);
 
   // Set cgi socket
   cgi_socket_ = parent_socket;

@@ -163,6 +163,7 @@ TEST_F(DoDelete, SuccessCase) {
 
 
 namespace DoCGI {
+// ServerConfigがセットできないので，テストは失敗します．
 class DoCGI : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
@@ -180,10 +181,6 @@ TEST_F(DoCGI, Case1) {
 
   std::string response_message_str;
 
-  char cwd[1024];
-  getcwd(cwd, sizeof(cwd));
-  std::cout << cwd << std::endl;
-
   do_CGI(response_message_str, server_child, file_path_, query_string_);
 
   std::cout << response_message_str << std::endl;
@@ -195,10 +192,6 @@ TEST_F(DoCGI, FileNotFoundCase1) {
   std::string query_string_;
 
   std::string response_message_str;
-
-  char cwd[1024];
-  getcwd(cwd, sizeof(cwd));
-  std::cout << cwd << std::endl;
 
   do_CGI(response_message_str, server_child, file_path_, query_string_);
 
