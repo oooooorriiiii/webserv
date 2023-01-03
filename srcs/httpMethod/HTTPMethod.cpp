@@ -234,7 +234,7 @@ int do_delete(std::string &response_message_str,
 
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   response_message_stream << "Date: " << CreateDate() << CRLF;
-  response_message_stream << "Connection: " << connection << CRLF;
+  response_message_stream << "Connection: " << connection << CRLF << CRLF;
 
   response_message_str = response_message_stream.str();
   return response_status;
@@ -250,12 +250,8 @@ int do_CGI(std::string &response_message_str,
            ft::ServerChild server_child,
            std::string file_path,
            std::string query_string,
-           const ServerConfig::err_page_map &err_pages,
-           const std::string &connection) {
-  int response_status;
+           const ServerConfig::err_page_map &err_pages) {
   std::stringstream response_message_stream;
-  const int buf_size = 1024;
-  char buf[buf_size];
 
   /*
    * Check to exist file
@@ -292,37 +288,8 @@ int do_CGI(std::string &response_message_str,
     response_message_str = CreateErrorResponse(500, err_pages); 
     return (500);
   }
-  int cgi_out_stream = cgi.GetCgiSocket();
 
-  /*
-   * Read CGI output
-   *
-   * TODO: implement safe read
-   */
-  ssize_t n;
-  std::stringstream cgi_output;
-  while ((n = read(cgi_out_stream, buf, buf_size)) > 0) {
-    buf[n] = '\0';
-    cgi_output << std::string(reinterpret_cast<const char *>(buf));
-  }
-
-  /*
-   * Create response header
-   */
-  response_message_stream << "HTTP/1.1 200 OK" << CRLF;
-  response_status = 200;
-  response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
-  response_message_stream << "Date: " << CreateDate() << CRLF;
-  response_message_stream << "Last-Modified: " << CreateDate() << CRLF;
-  response_message_stream << "Content-Type: " << "text/html" << CRLF;
-  response_message_stream << "Content-Length: " << cgi_output.str().size() << CRLF;
-  response_message_stream << "Connection: " << connection << CRLF;
-
-  // send body
-  response_message_stream << CRLF;
-
-  response_message_stream << cgi_output.str();
-
-  response_message_str = response_message_stream.str();
-  return response_status;
+  std::cout << ":D ~~~~ throwing for: " << cgi.GetCgiSocket() << std::endl;
+  // get contents by using poll
+  throw ft::Socket::readCGIfd(cgi.GetCgiSocket());
 }

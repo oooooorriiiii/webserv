@@ -9,6 +9,7 @@
 #include <string>
 #include "../HTTP/HTTPHead.hpp"
 #include "../server/server.hpp"
+#include "../server/socket.hpp"
 
 typedef std::map<std::string, std::string> http_header_t;
 
@@ -36,7 +37,6 @@ int do_CGI(std::string &response_message_str,
            ft::ServerChild server_child,
            std::string file_path,
            std::string query_string,
-           const ServerConfig::err_page_map &err_pages,
-           const std::string &connection);
+           const ServerConfig::err_page_map &err_pages);
 
 #endif //WEBSERV_SRCS_HTTPMETHOD_HTTPMETHOD_H_

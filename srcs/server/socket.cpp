@@ -5,7 +5,7 @@
 namespace ft
 {
 	Socket::Socket() : sockfd_vec_(), closedfd_vec_(), poll_fd_vec_(), last_recieve_time_map_(),
-		msg_to_send_map_(), fd_to_port_map_(), used_fd_set_(), keep_connect_time_len_(30)
+		msg_to_send_map_(), fd_to_port_map_(), used_fd_set_(), keep_connect_time_len_(30), cgi_(-1)
 	{
 	}
 
@@ -17,7 +17,7 @@ namespace ft
 	Socket::Socket(const Socket& src) : sockfd_vec_(src.sockfd_vec_), closedfd_vec_(src.closedfd_vec_),
 		poll_fd_vec_(src.poll_fd_vec_), last_recieve_time_map_(src.last_recieve_time_map_),
 		msg_to_send_map_(src.msg_to_send_map_), fd_to_port_map_(src.fd_to_port_map_),
-		used_fd_set_(src.used_fd_set_), keep_connect_time_len_(src.keep_connect_time_len_)
+		used_fd_set_(src.used_fd_set_), keep_connect_time_len_(src.keep_connect_time_len_), cgi_(src.cgi_)
 	{
 	}
 
@@ -30,6 +30,7 @@ namespace ft
 		fd_to_port_map_ = rhs.fd_to_port_map_;
 		used_fd_set_ = rhs.used_fd_set_;
 		keep_connect_time_len_ = rhs.keep_connect_time_len_;
+		cgi_ = rhs.cgi_;
 		return (*this);
 	}
 
@@ -149,7 +150,13 @@ namespace ft
 			}
 			else if ((client.revents & POLLHUP) == POLLHUP)
 			{
-				std::cerr << "POLLHUP: " << client.fd << std::endl;
+				std::cerr << "POLLHUP: " << client.fd << std::endl;	
+				// because the fd pipe for cgi is closed already,
+				// revents for the cgi fd will become POLLHUP
+				// so we catch ready cgi here instead of with POLLIN
+				if (client.fd == cgi_) {
+					return (recieve_msg_from_cgi_(cgi_, i));
+				}
 				close_fd_(client.fd, i);
 				throw closedConnection(client.fd);
 			}
@@ -169,7 +176,17 @@ namespace ft
 				}
 				else
 				{
-					register_new_client_(client.fd);
+					int connection = accept(client.fd, NULL, NULL);
+					if (connection == -1)
+						throw NoRecieveMsg();
+
+					register_new_client_(connection, false);
+					fd_to_port_map_[connection] = fd_to_port_map_[client.fd];
+					try {
+						set_nonblock_(connection);
+					} catch (const std::exception& e) {
+						throw serverInternalError(connection);
+					}
 					throw recieveMsgFromNewClient(*(--used_fd_set_.end()));
 				}
 			}
@@ -234,45 +251,64 @@ namespace ft
 		return(closedfd_vec_);
 	}
 
-	void Socket::register_new_client_(int sock_fd)
+	void Socket::register_new_client_(int fd, bool is_cgi)
 	{
-		int connection = accept(sock_fd, NULL, NULL);
-		if (connection == -1)
-			throw NoRecieveMsg();
-
-		try {
-			set_nonblock_(connection);
-		} catch (const std::exception& e) {
-			throw serverInternalError(connection);
-		}
+		if (is_cgi)
+			cgi_ = fd;
 
 		struct pollfd poll_fd;
-		poll_fd.fd = connection;
+		poll_fd.fd = fd;
 		poll_fd.events = POLLIN;
 		poll_fd.revents = 0;
 		poll_fd_vec_.push_back(poll_fd);
-		used_fd_set_.insert(connection);
+		used_fd_set_.insert(fd);
 
-		last_recieve_time_map_[connection] = time(NULL);
-		fd_to_port_map_[connection] = fd_to_port_map_[sock_fd];
+		last_recieve_time_map_[fd] = time(NULL);
 	}
 
-	Socket::RecievedMsg Socket::recieve_msg_from_connected_client_(int connection, size_t i_poll_fd)
+	Socket::RecievedMsg Socket::recieve_msg_from_connected_client_(int client_fd, size_t i_poll_fd)
 	{
 		char buf[BUFFER_SIZE + 1];
 
-		last_recieve_time_map_[connection] = time(NULL);
+		last_recieve_time_map_[client_fd] = time(NULL);
 
-		ssize_t recv_ret = recv(connection, buf, BUFFER_SIZE, 0);
+		ssize_t recv_ret = recv(client_fd, buf, BUFFER_SIZE, 0);
 		if (recv_ret == -1)
-			throw serverInternalError(connection);
+			throw serverInternalError(client_fd);
 		if (recv_ret == 0) {
-			close_fd_(connection, i_poll_fd);
-			throw closedConnection(connection);
+			close_fd_(client_fd, i_poll_fd);
+			throw closedConnection(client_fd);
 		}
 
 		buf[recv_ret] = '\0';
-		return (RecievedMsg(std::string(buf), connection, fd_to_port_map_[connection]));
+		return (RecievedMsg(std::string(buf), client_fd, fd_to_port_map_[client_fd]));
+	}
+
+	Socket::RecievedMsg Socket::recieve_msg_from_cgi_(int cgi_fd, size_t i_poll_fd)
+	{
+		// I used mori-san's code from do_cgi to get the contents of the cgi_fd
+		ssize_t n;
+		std::stringstream cgi_output;
+		char buf[BUFFER_SIZE + 1];
+		while ((n = read(cgi_, buf, BUFFER_SIZE)) > 0) {
+			if (n == -1) {
+				break ;
+			}
+ 			buf[n] = '\0';
+  			cgi_output << std::string(reinterpret_cast<const char *>(buf));
+  		}
+		std::cout << "REMOVING FD: " << poll_fd_vec_[i_poll_fd].fd << std::endl;
+		// closing here instead of in ~cgi() &
+		// remove from socket vectors since we don't need to poll it anymore
+		close(cgi_);
+		poll_fd_vec_.erase(poll_fd_vec_.begin() + i_poll_fd);
+		used_fd_set_.erase(cgi_);
+		cgi_ = -1;
+		// serverInternalError will catch cgi_fd, but send err message to the requesting client
+		if (n == -1)
+			throw ft::Socket::serverInternalError(cgi_fd);
+		// if all is well, return completed recieved message for main server receive loop
+		return (RecievedMsg(cgi_output.str(), cgi_fd, 0));
 	}
 
 	void Socket::close_fd_(const int fd, const int i_poll_fd)
@@ -341,8 +377,13 @@ namespace ft
 	{
 	}
 
-	Socket::serverInternalError::serverInternalError(const int client_id)
-		: client_id(client_id)
+	Socket::serverInternalError::serverInternalError(const int fd)
+		: fd_(fd)
+	{
+	}
+
+	Socket::readCGIfd::readCGIfd(const int cgi_fd)
+		: cgi_fd_(cgi_fd)
 	{
 	}
 
