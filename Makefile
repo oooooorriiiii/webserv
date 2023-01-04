@@ -20,6 +20,18 @@ OBJS := $(SRCS:.cpp=.o)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
+	@if ! grep "127.0.0.1 first" /etc/hosts >/dev/null; then \
+		sudo -- sh -c "echo 127.0.0.1 first >> /etc/hosts"; \
+	fi;
+	@if ! grep "127.0.0.1 second" /etc/hosts >/dev/null; then \
+		sudo -- sh -c "echo 127.0.0.1 second >> /etc/hosts"; \
+	fi;
+	@if ! grep "127.0.0.1 hoge" /etc/hosts >/dev/null; then \
+		sudo -- sh -c "echo 127.0.0.1 hoge >> /etc/hosts"; \
+	fi;
+	@if ! grep "127.0.0.1 redirect" /etc/hosts >/dev/null; then \
+		sudo -- sh -c "echo 127.0.0.1 redirect >> /etc/hosts"; \
+	fi;
 
 all: $(NAME)
 
@@ -28,6 +40,18 @@ clean:
 
 fclean: clean
 	rm -f $(NAME)
+	@if grep "127.0.0.1 first" /etc/hosts >/dev/null; then \
+		sudo -- sh -c "sed -ie \"/127.0.0.1 first/d\" /etc/hosts"; \
+	fi;
+	@if grep "127.0.0.1 second" /etc/hosts >/dev/null; then \
+		sudo -- sh -c "sed -ie \"/127.0.0.1 second/d\" /etc/hosts"; \
+	fi;
+	@if grep "127.0.0.1 hoge" /etc/hosts >/dev/null; then \
+		sudo -- sh -c "sed -ie \"/127.0.0.1 hoge/d\" /etc/hosts"; \
+	fi;
+	@if grep "127.0.0.1 redirect" /etc/hosts >/dev/null; then \
+		sudo -- sh -c "sed -ie \"/127.0.0.1 redirect/d\" /etc/hosts"; \
+	fi;
 
 re: fclean all
 
