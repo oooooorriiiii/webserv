@@ -24,6 +24,9 @@ class Cgi {
   int GetCgiSocket() const;
 
  private:
+  Cgi();
+  Cgi(const Cgi& src);
+  Cgi& operator=(const Cgi& rhs);
   std::string cgi_path_;
   std::map<std::string, std::string> cgi_env_val_;
   int         cgi_socket_;
