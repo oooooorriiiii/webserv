@@ -171,7 +171,6 @@ int do_get(std::string &response_message_str,
         body_stream << reading_line_buf << '\n';
       body = body_stream.str();
     } else if (S_ISDIR(st.st_mode) && autoindex) {
-      std::cout << "autoindex: " << autoindex << std::endl;
       std::cout << "file_path: " << file_path << std::endl; //debug
       //body = render_http(file_path);
       body = "This will be direcity list :)";
