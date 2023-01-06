@@ -137,7 +137,7 @@ int do_put(std::string &response_message_str,
 
   response_message_str = response_message_stream.str();
 
-  return response_status;
+  return (connection == "close" ? 400 : response_status);
 }
 
 /**
@@ -261,7 +261,7 @@ int do_delete(std::string &response_message_str,
   response_message_stream << "Connection: " << connection << CRLF << CRLF;
 
   response_message_str = response_message_stream.str();
-  return response_status;
+  return connection == "close" ? 400 : response_status;
 }
 
 
