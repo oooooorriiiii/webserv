@@ -150,21 +150,50 @@ int do_put(std::string &response_message_str,
 int do_get(std::string &response_message_str,
           const std::string &file_path,
           const ServerConfig::err_page_map &err_pages,
-          const std::string &connection) {
+          const std::string &connection,
+          bool autoindex) {
   int response_status;
   std::stringstream response_message_stream;
+  std::stringstream body_stream;
+  std::string       body;
 
   int ret_val;
   struct stat st = {};
 
   ret_val = stat(file_path.c_str(), &st);
-  if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateErrorResponse(404, err_pages);
-    return (404);
+  if (ret_val == 0) {
+    if (S_ISREG(st.st_mode)) {
+      // file read
+      std::ifstream reading_file;
+      std::string reading_line_buf;
+      reading_file.open(file_path.c_str());
+      while (std::getline(reading_file, reading_line_buf))
+        body_stream << reading_line_buf << '\n';
+      body = body_stream.str();
+    } else if (S_ISDIR(st.st_mode) && autoindex) {
+      std::cout << "autoindex: " << autoindex << std::endl;
+      std::cout << "file_path: " << file_path << std::endl; //debug
+      //body = render_http(file_path);
+      body = "This will be direcity list :)";
+    } else {
+      response_message_str = CreateErrorResponse(403, err_pages);
+      return (403); 
+    }
+  } else {
+    if (errno == ENOENT) {
+      response_message_str = CreateErrorResponse(404, err_pages);
+      return (404);
+    } else if (errno == EACCES) {
+      response_message_str = CreateErrorResponse(403, err_pages);
+      return (403); 
+    } else {
+      response_message_str = CreateErrorResponse(500, err_pages);
+      return (500); 
+		}
   }
 
   response_message_stream << "HTTP/1.1 200 OK" << CRLF;
-  response_status = 200;
+  response_status = connection == "close" ? 400 : 200;
 
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   response_message_stream << "Date: " << CreateDate() << CRLF;
@@ -183,17 +212,12 @@ int do_get(std::string &response_message_str,
   // Content-Type:
   response_message_stream << "Content-Type: " << "text/html" << CRLF;
   // Content-Length:
-  response_message_stream << "Content-Length: " << st.st_size << CRLF;
+  response_message_stream << "Content-Length: " << body.size() << CRLF;
   response_message_stream << "Connection: " << connection << CRLF;
 
   // send body
   response_message_stream << CRLF;
-  // file read
-  std::ifstream reading_file;
-  std::string reading_line_buf;
-  reading_file.open(file_path.c_str());
-  while (std::getline(reading_file, reading_line_buf))
-    response_message_stream << reading_line_buf << '\n';
+  response_message_stream << body;
 
   response_message_str = response_message_stream.str();
   return response_status;

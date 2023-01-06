@@ -47,6 +47,7 @@ std::string http_process(ft::ServerChild& server_child) {
   // http://host:8080/locConf/<path_parts>
   const std::string upload_fp = createUploadFP(locationConf.getUploadFilepath(),
                                                 server_child.Get_path_parts());
+  bool autoindex = locationConf.getAutoIndex();
 
 
   /*
@@ -78,7 +79,8 @@ std::string http_process(ft::ServerChild& server_child) {
       ret = do_CGI(response_message_str, server_child, plane_filepath,
                   query_string_, err_pages);
     } else {
-      ret = do_get(response_message_str, plane_filepath, err_pages, connection); 
+      ret = do_get(response_message_str, plane_filepath, err_pages,
+                  connection, autoindex); 
     }
   } else if (kRequestMethod == "PUT") {
     ret = do_put(response_message_str, plane_filepath, kHttpBody,
