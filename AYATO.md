@@ -13,4 +13,6 @@ do_get()した際によびだせばいい。
 if (ret_val < 0) { if autoindex==true - body = render_html() else return 404 ?? 
 ```
 
-`server.cpp`でなんとか条件作っておいたら良さそうだねー
+~~`server.cpp`でなんとか条件作っておいたら良さそうだねー~~
+
+`httpMethod`の`do_get`でやればOKってかんじか
