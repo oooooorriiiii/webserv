@@ -33,7 +33,7 @@ namespace ft
 		index.push_back("index.html");
 
 		dfltLoc.setUri("/");
-		dfltLoc.setAlias("./var/www/inception_server/html/");
+		dfltLoc.setAlias("./var/www/html/");
 		dfltLoc.setAutoindex(false);
 		dfltLoc.setAllowMethod(allow_method);
 		dfltLoc.addIndex(index);

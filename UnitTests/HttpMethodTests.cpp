@@ -176,7 +176,7 @@ class DoCGI : public ::testing::Test {
 
 TEST_F(DoCGI, Case1) {
   ft::ServerChild server_child;
-  std::string file_path_ = "var/www/inception_server/cgi-bin/check-cgi-environ.py";
+  std::string file_path_ = "var/www/webserv/cgi-bin/check-cgi-environ.py";
   std::string query_string_;
 
   std::string response_message_str;
@@ -188,7 +188,7 @@ TEST_F(DoCGI, Case1) {
 
 TEST_F(DoCGI, FileNotFoundCase1) {
   ft::ServerChild server_child;
-  std::string file_path_ = "var/www/inception_server/cgi-bin/notFound.py";
+  std::string file_path_ = "var/www/webserv/cgi-bin/notFound.py";
   std::string query_string_;
 
   std::string response_message_str;
@@ -200,7 +200,7 @@ TEST_F(DoCGI, FileNotFoundCase1) {
 
 TEST_F(DoCGI, ErrorCase1) {
   ft::ServerChild server_child;
-  std::string file_path_ = "var/www/inception_server/cgi-bin/misbehave.py";
+  std::string file_path_ = "var/www/webserv/cgi-bin/misbehave.py";
   std::string query_string_;
 
   std::string response_message_str;

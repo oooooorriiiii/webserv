@@ -191,8 +191,8 @@ std::string CreateErrorResponse(int status_code,
   std::string       connection;
   
   ServerConfig::err_page_map::const_iterator err_page = err_pages.find(status_code);
-  std::string serverHTMLDir = "./var/www/inception_server/html/";
-
+  std::string serverHTMLDir = "./var/www/html/";
+ 
   if (err_page != err_pages.end()) {
     body = FileContentToStr(status_code, serverHTMLDir + err_page->second);
   } else {
@@ -203,11 +203,14 @@ std::string CreateErrorResponse(int status_code,
 
   // MUST
   if (status_code == 405) {
-    std::set<std::string>::iterator last = --allow_methods.end();
     response << "Allow: ";
-    for (std::set<std::string>::iterator it = allow_methods.begin(); it != last; ++it)
-      response << *it << ", ";
-    response << *last << CRLF;
+    if (!allow_methods.empty()) {
+      std::set<std::string>::iterator last = --allow_methods.end();
+      for (std::set<std::string>::iterator it = allow_methods.begin(); it != last; ++it)
+        response << *it << ", ";
+      response << *last;
+    }
+    response << CRLF;
   }
 
   response << "Content-Length: " << body.size() << CRLF
