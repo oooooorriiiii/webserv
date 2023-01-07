@@ -109,7 +109,8 @@ namespace ft
 				} else if (response_code >= 400) {
 					std::cout << "request is bad\n";
 					ServerConfig::err_page_map error_pages = serverChild.Get_server_config().getErrorPage();
-					response = CreateErrorResponse(response_code, error_pages);
+					std::set<std::string> allow_method = serverChild.Get_location_config().getAllowMethod();
+					response = CreateErrorResponse(response_code, error_pages, allow_method);
 				} else {
 					std::cout << "request is good\n";
                 	response = http_process(serverChild);
@@ -158,8 +159,9 @@ namespace ft
 
 			ServerChild& serverChild = httpRequest_pair_map_[client_fd].second;
 			ServerConfig::err_page_map error_pages = serverChild.Get_server_config().getErrorPage();
+			std::set<std::string> allow_method = serverChild.Get_location_config().getAllowMethod();
 
-            socket_.send_msg(client_fd, 500, CreateErrorResponse(500, error_pages));
+            socket_.send_msg(client_fd, 500, CreateErrorResponse(500, error_pages, allow_method));
 		}
 	}
 

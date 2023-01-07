@@ -52,7 +52,8 @@ int do_put(std::string &response_message_str,
            const std::string &http_body,
            const ServerConfig::err_page_map &err_pages,
            const std::string &connection,
-           const std::string &upload_file_path) {
+           const std::string &upload_file_path,
+           const std::set<std::string> &allow_method) {
   int response_status;
   std::stringstream response_message_stream;
 
@@ -73,17 +74,17 @@ int do_put(std::string &response_message_str,
       body << from_file.rdbuf();
       from_file.close();
     } else {
-      response_message_str = CreateErrorResponse(500, err_pages); 
-      return (500); 
+      response_message_str = CreateErrorResponse(500, err_pages, allow_method);
+      return (500);
     }
   } else { // if upload filepath doesn't exist, use body from http request
     if (errno == ENOENT) {
       body << http_body;
     } else if (errno == EACCES) {
-      response_message_str = CreateErrorResponse(403, err_pages);
+      response_message_str = CreateErrorResponse(403, err_pages, allow_method);
       return (403); 
     } else {
-      response_message_str = CreateErrorResponse(500, err_pages);
+      response_message_str = CreateErrorResponse(500, err_pages, allow_method);
       return (500); 
 		} 
   }
@@ -102,10 +103,10 @@ int do_put(std::string &response_message_str,
     if (errno == ENOENT) {
       response_status = 201;
     } else if (errno == EACCES) {
-      response_message_str = CreateErrorResponse(403, err_pages);
+      response_message_str = CreateErrorResponse(403, err_pages, allow_method);
       return (403); 
     } else {
-      response_message_str = CreateErrorResponse(500, err_pages);
+      response_message_str = CreateErrorResponse(500, err_pages, allow_method);
       return (500); 
 		}
   } 
@@ -118,7 +119,7 @@ int do_put(std::string &response_message_str,
   if (contents_file.is_open()) { // if all is well
     contents_file << body.str(); 
   } else {
-    response_message_str = CreateErrorResponse(500, err_pages);
+    response_message_str = CreateErrorResponse(500, err_pages, allow_method);
     return (500); 
   }
   contents_file.close();
@@ -152,7 +153,8 @@ int do_get(std::string &response_message_str,
           const ServerConfig::err_page_map &err_pages,
           const std::string &connection,
           bool autoindex,
-          const std::string alias) {
+          const std::string alias,
+          const std::set<std::string> &allow_method) {
   int response_status;
   std::stringstream response_message_stream;
   std::stringstream body_stream;
@@ -205,18 +207,18 @@ int do_get(std::string &response_message_str,
       }
       body = body_stream.str();
     } else {
-      response_message_str = CreateErrorResponse(403, err_pages);
+      response_message_str = CreateErrorResponse(403, err_pages, allow_method);
       return (403); 
     }
   } else {
     if (errno == ENOENT) {
-      response_message_str = CreateErrorResponse(404, err_pages);
+      response_message_str = CreateErrorResponse(404, err_pages, allow_method);
       return (404);
     } else if (errno == EACCES) {
-      response_message_str = CreateErrorResponse(403, err_pages);
+      response_message_str = CreateErrorResponse(403, err_pages, allow_method);
       return (403); 
     } else {
-      response_message_str = CreateErrorResponse(500, err_pages);
+      response_message_str = CreateErrorResponse(500, err_pages, allow_method);
       return (500); 
 		}
   }
@@ -263,7 +265,8 @@ int do_get(std::string &response_message_str,
 int do_delete(std::string &response_message_str,
               const std::string &file_path,
               const ServerConfig::err_page_map &err_pages,
-              const std::string &connection) {
+              const std::string &connection,
+              const std::set<std::string> &allow_method) {
   int response_status;
   std::stringstream response_message_stream;
   std::string delete_dir = "ok";
@@ -282,7 +285,7 @@ int do_delete(std::string &response_message_str,
     response_message_stream << "HTTP/1.1 204 No Content" << CRLF;
     response_status = 204;
   } else {
-    response_message_str = CreateErrorResponse(500, err_pages);
+    response_message_str = CreateErrorResponse(500, err_pages, allow_method);
     return (500);
   }
 
@@ -304,7 +307,8 @@ int do_CGI(std::string &response_message_str,
            ft::ServerChild server_child,
            std::string file_path,
            std::string query_string,
-           const ServerConfig::err_page_map &err_pages) {
+           const ServerConfig::err_page_map &err_pages,
+           const std::set<std::string> &allow_method) {
   std::stringstream response_message_stream;
 
   /*
@@ -316,7 +320,7 @@ int do_CGI(std::string &response_message_str,
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateErrorResponse(404, err_pages);
+    response_message_str = CreateErrorResponse(404, err_pages, allow_method);
     return (404);
   }
 
@@ -339,7 +343,7 @@ int do_CGI(std::string &response_message_str,
     cgi.Execute();
   } catch (std::exception &e) {
     // status 500
-    response_message_str = CreateErrorResponse(500, err_pages); 
+    response_message_str = CreateErrorResponse(500, err_pages, allow_method);
     return (500);
   }
 

@@ -124,13 +124,6 @@ namespace ft
 		// use index from config if URI is a directory
 		attach_index();
 
-		/** check IS CGI? **/
-		/*if (HTTP_head_.GetRequestURI().find('?') != std::string::npos) {
-			// read body??
-			parse_status_ = complete;
-			return ;
-		}*/
-
 		// decide parse status and get content-length if needed
 		decide_parse_status_();
 
@@ -205,12 +198,17 @@ namespace ft
 	void	ServerChild::check_method_ () {
 		std::set<std::string> valid_methods = location_config_.getAllowMethod();
 		std::set<std::string>::iterator end = valid_methods.end();
+		std::string method = HTTP_head_.GetRequestMethod();
 
 		std::cout << "REQUEST METHOD: " << HTTP_head_.GetRequestMethod() << std::endl << " ALLOWED METHODS: ";
 		for (std::set<std::string>::iterator it = valid_methods.begin(); it != end; ++it)
 			std::cout << *it << " " << std::endl;
 		std::cout << std::endl;
-		if (valid_methods.find(HTTP_head_.GetRequestMethod()) == end) {
+		if (valid_methods.find(method) == end) {
+			// 403 if known method is not in locConf 'allowed_method'
+			if (method == "PUT" || method == "GET" || method == "DELETE" || method == "POST")
+				throw_(405, "Not allowed");
+			// 501 if method is completely unkown
             throw_(501, "Not Implemented - invalid request method");
         }
 	}

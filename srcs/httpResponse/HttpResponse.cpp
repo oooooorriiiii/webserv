@@ -143,7 +143,7 @@ std::string CreateSimpleResponseBody(const std::string& response) {
     << "\t</head>" << CRLF
     << "\t<body>" << CRLF
     << "\t\t<center><h1>" << response << "</h1></center>" << CRLF
-    << "\t\t<hr><center>inception/0.0.1</center>" << CRLF
+    << "\t\t<hr><center>42webserv/0.0.1</center>" << CRLF
     << "\t</body>" << CRLF
     << "</html>" << CRLF;
 
@@ -175,15 +175,17 @@ std::string CreateRedirectResponse(int status_code, const std::string& location)
   body = CreateSimpleResponseBody(GetResponseLine(status_code)); 
 
   response << CreateSimpleResponseHeaders(status_code)
-    << "content-length: " << body.size() << CRLF
-    << "location: " << location << CRLF
-    << "connection: keep-alive" << CRLF << CRLF
+    << "Content-Length: " << body.size() << CRLF
+    << "Location: " << location << CRLF
+    << "Connection: keep-alive" << CRLF << CRLF
     << body;
 
   return (response.str());
 }
 
-std::string CreateErrorResponse(int status_code, const ServerConfig::err_page_map& err_pages) {
+std::string CreateErrorResponse(int status_code,
+                      const ServerConfig::err_page_map& err_pages,
+                      const std::set<std::string> &allow_methods) {
   std::stringstream response;
   std::string       body;
   std::string       connection;
@@ -197,9 +199,19 @@ std::string CreateErrorResponse(int status_code, const ServerConfig::err_page_ma
     body = CreateSimpleResponseBody(GetResponseLine(status_code));
   }
 
-  response << CreateSimpleResponseHeaders(status_code)
-    << "content-length: " << body.size() << CRLF
-    << "connection: close" << CRLF << CRLF
+  response << CreateSimpleResponseHeaders(status_code);
+
+  // MUST
+  if (status_code == 405) {
+    std::set<std::string>::iterator last = --allow_methods.end();
+    response << "Allow: ";
+    for (std::set<std::string>::iterator it = allow_methods.begin(); it != last; ++it)
+      response << *it << ", ";
+    response << *last << CRLF;
+  }
+
+  response << "Content-Length: " << body.size() << CRLF
+    << "Connection: close" << CRLF << CRLF
     << body;
 
   return (response.str());

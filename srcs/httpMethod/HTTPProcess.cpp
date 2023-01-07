@@ -48,6 +48,7 @@ std::string http_process(ft::ServerChild& server_child) {
   const std::string upload_fp = createUploadFP(locationConf.getUploadFilepath(),
                                                 server_child.Get_path_parts());
   bool autoindex = locationConf.getAutoIndex();
+  const std::set<std::string> allow_method = locationConf.getAllowMethod();
 
 
   /*
@@ -73,22 +74,23 @@ std::string http_process(ft::ServerChild& server_child) {
   if (kRequestMethod == "POST") {
     // Any POST request is CGI
     ret = do_CGI(response_message_str, server_child, plane_filepath,
-                query_string_, err_pages);
+                query_string_, err_pages, allow_method);
   } else if (kRequestMethod == "GET") {
     if (is_CGI) {
       ret = do_CGI(response_message_str, server_child, plane_filepath,
-                  query_string_, err_pages);
+                  query_string_, err_pages, allow_method);
     } else {
       ret = do_get(response_message_str, plane_filepath, err_pages,
-                  connection, autoindex, kLocationAlias); 
+                  connection, autoindex, kLocationAlias, allow_method); 
     }
   } else if (kRequestMethod == "PUT") {
     ret = do_put(response_message_str, plane_filepath, kHttpBody,
-                err_pages, connection, upload_fp);
+                err_pages, connection, upload_fp, allow_method);
   } else if (kRequestMethod == "DELETE") {
-    ret = do_delete(response_message_str, plane_filepath, err_pages, connection);
+    ret = do_delete(response_message_str, plane_filepath, err_pages,
+                  connection, allow_method);
   } else {
-    response_message_str = CreateErrorResponse(501, err_pages);
+    response_message_str = CreateErrorResponse(501, err_pages, allow_method);
     ret = 501;
   }
 
