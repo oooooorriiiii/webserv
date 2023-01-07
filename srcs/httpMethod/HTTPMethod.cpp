@@ -200,6 +200,9 @@ int do_get(std::string &response_message_str,
         i++;
       }
       std::string autoIndexTitlePath = tmpFilePath.substr(i);
+      body_stream << "<head>" << CRLF
+        << "<meta charset='utf-8'>" << CRLF
+        << "</head>" << CRLF;
       body_stream << "<h1>Index of /" << autoIndexTitlePath << "</h1>" << CRLF;
       body_stream << "<hr>" << CRLF;
       for (std::set<std::string>::iterator it = dirList.begin(); it != dirList.end(); it++) {
