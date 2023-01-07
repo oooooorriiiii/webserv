@@ -77,6 +77,10 @@ std::string http_process(ft::ServerChild& server_child) {
       ret = do_CGI(response_message_str, server_child, plane_filepath,
                   query_string_, err_pages);
     } else {
+      std::cout << "*************" << std::endl;
+      std::cout << plane_filepath << std::endl;
+      std::cout << "*************" << std::endl;
+      
       ret = do_get(response_message_str, plane_filepath, err_pages, connection); 
     }
   } else if (kRequestMethod == "PUT") {
