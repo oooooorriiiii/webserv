@@ -44,8 +44,10 @@ std::string http_process(ft::ServerChild& server_child) {
   const std::string connection = get_connection(httpHead.GetHeaderFields());
   const std::string kLocationAlias = locationConf.getAlias();
   const std::string kLocationUri = locationConf.getUri();
-  const std::string upload_file_path = locationConf.getUploadFilepath();
-  const std::string upload_file = server_child.Get_path_parts(); // http://host:8080/locConf/<path_parts>
+  // http://host:8080/locConf/<path_parts>
+  const std::string upload_fp = createUploadFP(locationConf.getUploadFilepath(),
+                                                server_child.Get_path_parts());
+  bool autoindex = locationConf.getAutoIndex();
 
 
   /*
@@ -77,15 +79,12 @@ std::string http_process(ft::ServerChild& server_child) {
       ret = do_CGI(response_message_str, server_child, plane_filepath,
                   query_string_, err_pages);
     } else {
-      std::cout << "*************" << std::endl;
-      std::cout << plane_filepath << std::endl;
-      std::cout << "*************" << std::endl;
-      
-      ret = do_get(response_message_str, plane_filepath, err_pages, connection); 
+      ret = do_get(response_message_str, plane_filepath, err_pages,
+                  connection, autoindex, kLocationAlias); 
     }
   } else if (kRequestMethod == "PUT") {
     ret = do_put(response_message_str, plane_filepath, kHttpBody,
-                err_pages, connection, upload_file_path + upload_file);
+                err_pages, connection, upload_fp);
   } else if (kRequestMethod == "DELETE") {
     ret = do_delete(response_message_str, plane_filepath, err_pages, connection);
   } else {
@@ -104,4 +103,10 @@ std::string get_connection(const http_header_t& headers) {
   if (connection == headers.end())
     return ("keep-alive");
   return (connection->second == "close" ? "close" : "keep-alive");
+}
+
+std::string createUploadFP(const std::string& filepath, const std::string path_parts) {
+  return (filepath
+          + (filepath[filepath.size() - 1] == '/' || path_parts[0] == '/' ? "" : "/")
+          + path_parts);
 }

@@ -3,7 +3,6 @@
 //
 
 #include "MethodUtils.hpp"
-#include <iostream>
 
 /**
  *
@@ -30,6 +29,6 @@ std::string get_uri_and_check_CGI(const std::string &szUri, std::string &query_s
   } else {
     uri = szUri;
   }
-  
+
   return uri;
 }

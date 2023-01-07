@@ -134,7 +134,6 @@ std::string CreateSimpleResponseHeaders(int status_code) {
   return (defaultHeaders.str());
 }
 
-/*
 std::string CreateSimpleResponseBody(const std::string& response) {
   std::stringstream body;
   body << "<!DOCTYPE html>" << CRLF
@@ -146,31 +145,6 @@ std::string CreateSimpleResponseBody(const std::string& response) {
     << "\t\t<center><h1>" << response << "</h1></center>" << CRLF
     << "\t\t<hr><center>inception/0.0.1</center>" << CRLF
     << "\t</body>" << CRLF
-    << "</html>" << CRLF;
-
-  return (body.str());
-}
-*/
-
-#include "../utils/utils.hpp"
-std::string CreateSimpleResponseBody(const std::string& response) {
-  std::stringstream body;
-  body << "<!DOCTYPE html>" << CRLF
-    << "<html>" << CRLF
-    << "\t<head>" << CRLF
-    << "\t\t<title>" << response << "</title>" << CRLF
-    << "\t</head>" << CRLF
-    << "\t<body>" << CRLF
-    << "\t\t<center><h1>" << response << "</h1></center>" << CRLF
-    << "\t\t<hr><center>inception/0.0.1</center>" << CRLF
-    << "<!-- hello -->" << CRLF;
-  /*
-  std::set<std::string> dirList = ft::CreateDirectoryList("/");
-  for (std::set<std::string>::iterator it = dirList.begin(); it != dirList.end(); it++) {
-    body << "\t\t" << *it << "<br>" << CRLF;
-  };
-  */
-  body << "\t</body>" << CRLF
     << "</html>" << CRLF;
 
   return (body.str());

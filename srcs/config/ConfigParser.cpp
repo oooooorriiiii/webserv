@@ -434,7 +434,10 @@ void ConfigParser::setConfigUploadFilepath(E_BlockType block_type, std::vector<s
 		throw std::runtime_error("incorrect directive for server block: " + line[0]);
 		break;
 	case LOCATION:
-		this->location_config.setUploadFilepath(line[1]);
+		std::string upload_fp = line[1];
+		if (upload_fp[upload_fp.size() - 1] != '/')
+			upload_fp += "/";
+		this->location_config.setUploadFilepath(upload_fp);
 		break;
 	}
 }

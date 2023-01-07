@@ -202,7 +202,7 @@ namespace ft
 					msg_to_send.erase(0, sent_num);
 				else {
 					msg_to_send_map_.erase(client.fd);
-					if (sent_num == -1 || response_code >= 400) {
+					if (sent_num == -1 || sent_num == 0 || response_code >= 400) {
 							close_fd_(client.fd, i);
 							throw closedConnection(client.fd);
 					}
