@@ -161,6 +161,9 @@ void Cgi::Execute() {
   if (pid < 0) { // fork error
     close(parent_socket);
     close(child_socket);
+    free(argv[0]);
+    free(argv[1]);
+    free(argv);
     throw std::runtime_error("CGI error: fork failed");
   }
   if (pid == 0) { // child

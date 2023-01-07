@@ -59,7 +59,36 @@ int do_put(std::string &response_message_str,
   // MUST
 
   struct stat stat_buf = {};
-  int ret_val = stat(file_path.c_str(), &stat_buf);
+
+  std::ifstream from_file;
+  std::stringstream   body;
+
+  // check if upload_filepath exists
+  int ret_val = stat(upload_file_path.c_str(), &stat_buf);
+
+  // if upload file path exists, open and stream contents to body
+  if (ret_val == 0 && S_ISREG(stat_buf.st_mode)) {
+    from_file.open(upload_file_path.c_str());
+    if (from_file.is_open()) {
+      body << from_file.rdbuf();
+      from_file.close();
+    } else {
+      response_message_str = CreateErrorResponse(500, err_pages); 
+      return (500); 
+    }
+  } else { // if upload filepath doesn't exist, use body from http request
+    if (errno == ENOENT) {
+      body << http_body;
+    } else if (errno == EACCES) {
+      response_message_str = CreateErrorResponse(403, err_pages);
+      return (403); 
+    } else {
+      response_message_str = CreateErrorResponse(500, err_pages);
+      return (500); 
+		} 
+  }
+
+  ret_val = stat(file_path.c_str(), &stat_buf);
 
   // MUST
   if (ret_val == 0) {
@@ -83,43 +112,15 @@ int do_put(std::string &response_message_str,
 
   // create file
   std::ofstream contents_file;
-  std::ifstream from_file;
-  std::stringstream   body;
 
   // try to open requested file
   contents_file.open(file_path.c_str());
   if (contents_file.is_open()) { // if all is well
-    // check upload filepath
-    ret_val = stat(upload_file_path.c_str(), &stat_buf);
-    // if upload fille path exists, open and copy contents to requested file
-    if (ret_val == 0 && S_ISREG(stat_buf.st_mode)) {
-      from_file.open(upload_file_path.c_str());
-      if (from_file.is_open()) {
-        contents_file << from_file.rdbuf();
-        // client expects body of new content if status code is 201
-        from_file.seekg(0, from_file.beg);
-        body << from_file.rdbuf();
-      } else {
-        response_message_str = CreateErrorResponse(500, err_pages);
-        return (500); 
-      }
-    } else { // if upload filepath doesn't exist, use body from http request
-      if (errno == ENOENT) {
-        contents_file << http_body;
-        body << http_body;
-      } else if (errno == EACCES) {
-        response_message_str = CreateErrorResponse(403, err_pages);
-        return (403); 
-      } else {
-        response_message_str = CreateErrorResponse(500, err_pages);
-        return (500); 
-		  } 
-    }
+    contents_file << body.str(); 
   } else {
     response_message_str = CreateErrorResponse(500, err_pages);
     return (500); 
   }
-  from_file.close();
   contents_file.close();
   
   response_message_stream << "HTTP/1.1 " << GetResponseLine(response_status) << CRLF;
@@ -136,7 +137,7 @@ int do_put(std::string &response_message_str,
 
   response_message_str = response_message_stream.str();
 
-  return response_status;
+  return (connection == "close" ? 400 : response_status);
 }
 
 /**
@@ -149,21 +150,49 @@ int do_put(std::string &response_message_str,
 int do_get(std::string &response_message_str,
           const std::string &file_path,
           const ServerConfig::err_page_map &err_pages,
-          const std::string &connection) {
+          const std::string &connection,
+          bool autoindex) {
   int response_status;
   std::stringstream response_message_stream;
+  std::stringstream body_stream;
+  std::string       body;
 
   int ret_val;
   struct stat st = {};
 
   ret_val = stat(file_path.c_str(), &st);
-  if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateErrorResponse(404, err_pages);
-    return (404);
+  if (ret_val == 0) {
+    if (S_ISREG(st.st_mode)) {
+      // file read
+      std::ifstream reading_file;
+      std::string reading_line_buf;
+      reading_file.open(file_path.c_str());
+      while (std::getline(reading_file, reading_line_buf))
+        body_stream << reading_line_buf << '\n';
+      body = body_stream.str();
+    } else if (S_ISDIR(st.st_mode) && autoindex) {
+      std::cout << "file_path: " << file_path << std::endl; //debug
+      //body = render_http(file_path);
+      body = "This will be direcity list :)";
+    } else {
+      response_message_str = CreateErrorResponse(403, err_pages);
+      return (403); 
+    }
+  } else {
+    if (errno == ENOENT) {
+      response_message_str = CreateErrorResponse(404, err_pages);
+      return (404);
+    } else if (errno == EACCES) {
+      response_message_str = CreateErrorResponse(403, err_pages);
+      return (403); 
+    } else {
+      response_message_str = CreateErrorResponse(500, err_pages);
+      return (500); 
+		}
   }
 
   response_message_stream << "HTTP/1.1 200 OK" << CRLF;
-  response_status = 200;
+  response_status = connection == "close" ? 400 : 200;
 
   response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
   response_message_stream << "Date: " << CreateDate() << CRLF;
@@ -182,17 +211,12 @@ int do_get(std::string &response_message_str,
   // Content-Type:
   response_message_stream << "Content-Type: " << "text/html" << CRLF;
   // Content-Length:
-  response_message_stream << "Content-Length: " << st.st_size << CRLF;
+  response_message_stream << "Content-Length: " << body.size() << CRLF;
   response_message_stream << "Connection: " << connection << CRLF;
 
   // send body
   response_message_stream << CRLF;
-  // file read
-  std::ifstream reading_file;
-  std::string reading_line_buf;
-  reading_file.open(file_path.c_str());
-  while (std::getline(reading_file, reading_line_buf))
-    response_message_stream << reading_line_buf << '\n';
+  response_message_stream << body;
 
   response_message_str = response_message_stream.str();
   return response_status;
@@ -237,7 +261,7 @@ int do_delete(std::string &response_message_str,
   response_message_stream << "Connection: " << connection << CRLF << CRLF;
 
   response_message_str = response_message_stream.str();
-  return response_status;
+  return connection == "close" ? 400 : response_status;
 }
 
 

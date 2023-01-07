@@ -26,7 +26,8 @@ int do_put(std::string &response_message_str,
 int do_get(std::string &response_message_str,
             const std::string &file_path,
             const ServerConfig::err_page_map &err_pages,
-            const std::string &connection);
+            const std::string &connection,
+            bool autoindex);
 
 int do_delete(std::string &response_message_str,
             const std::string &file_path,

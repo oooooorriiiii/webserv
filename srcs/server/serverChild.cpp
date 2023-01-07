@@ -247,11 +247,14 @@ namespace ft
 			return ;	
 
 		for (std::vector<std::string>::iterator it = indexes.begin(); it != indexes.end(); ++it) {
-			std::string tmp = path_ + "/" + *it;
+			std::string tmp = path_
+							+ (path_[path_.size() - 1] == '/' || *((*it).begin()) == '/' ? "" : "/")
+							+ *it;
 			if (stat(tmp.c_str(), &sb) == -1 || !S_ISREG(sb.st_mode)) {
 				continue ;	
 			}
-			path_ += "/" + *it;
+			path_parts_ = *it;
+			path_ = tmp;
 			break ;
 		}
 	}
