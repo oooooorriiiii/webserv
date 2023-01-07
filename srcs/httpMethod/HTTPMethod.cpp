@@ -139,7 +139,6 @@ int do_put(std::string &response_message_str,
   return response_status;
 }
 
-
 /**
  *
  * @param http_header
@@ -147,7 +146,6 @@ int do_put(std::string &response_message_str,
  * @param response_message_str
  * @return
  */
-/*
 int do_get(std::string &response_message_str,
           const std::string &file_path,
           const ServerConfig::err_page_map &err_pages,
@@ -158,104 +156,11 @@ int do_get(std::string &response_message_str,
   int ret_val;
   struct stat st = {};
 
-  std::cout << "~~~~~~~~~~~~\n" << file_path << "\n~~~~~~~~~~~~" << std::endl;
-
-  if (file_path[file_path.length() - 1] == '/') {
-    response_message_stream << "HTTP/1.1 200 OK" << CRLF;
-    response_status = 200;
-
-    response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
-    response_message_stream << "Date: " << CreateDate() << CRLF;
-    response_message_stream << "Last-Modified: " << CreateDate() << CRLF;
-
-    // index file does not exist
-    std::string new_file_path = file_path;
-    std::string::size_type pos = new_file_path.find("html//");
-    if (pos != std::string::npos)
-    {
-      new_file_path.replace(pos, 6, "html/");
-    }
-    std::cout << "**********\n" << new_file_path << "\n**********" << std::endl;
-    std::set<std::string> dirList = ft::CreateDirectoryList("./var/www/inception_server/html/");
-    for (std::set<std::string>::iterator it = dirList.begin(); it != dirList.end(); it++) {
-      response_message_stream << "\t\t" << *it << "<br>" << CRLF;
-    }
-    
-    response_message_str = response_message_stream.str();
-    return response_status;
-
-  }
-
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
     response_message_str = CreateErrorResponse(404, err_pages);
     return (404);
   }
-
-  response_message_stream << "HTTP/1.1 200 OK" << CRLF;
-  response_status = 200;
-
-  response_message_stream << "Server: " << "42webserv" << "/1.0" << CRLF;
-  response_message_stream << "Date: " << CreateDate() << CRLF;
-  response_message_stream << "Last-Modified: " << CreateDate() << CRLF;
-
-//  // Force search results to text/html type
-//  if (!file_path.empty()) {
-//    // find type "x.html"
-//  } else {
-//    // find type file_path
-//  }
-
-  // sending partial content
-
-  // send full entry
-  // Content-Type:
-  response_message_stream << "Content-Type: " << "text/html" << CRLF;
-  // Content-Length:
-  response_message_stream << "Content-Length: " << st.st_size << CRLF;
-  response_message_stream << "Connection: " << connection << CRLF;
-
-  std::cout << "**********\n" << file_path << "\n**********" << std::endl;
-  
-  // Normal URL -> index file exist
-
-  // send body
-  response_message_stream << CRLF;
-  // file read
-  std::ifstream reading_file;
-  std::string reading_line_buf;
-  reading_file.open(file_path.c_str());
-  while (std::getline(reading_file, reading_line_buf))
-    response_message_stream << reading_line_buf << '\n';
-  
-
-  response_message_str = response_message_stream.str();
-  return response_status;
-}
-*/
-
-int do_get(std::string &response_message_str,
-          const std::string &file_path,
-          const ServerConfig::err_page_map &err_pages,
-          const std::string &connection) {
-  int response_status;
-  std::stringstream response_message_stream;
-
-  int ret_val;
-  struct stat st = {};
-
-  std::cout << "**********\n" << file_path << "\n**********" << std::endl;
-  std::cout << "~~~~~~~~~~~~~~~~~" << std::endl;
-  ret_val = stat(file_path.c_str(), &st);
-  if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateErrorResponse(404, err_pages);
-    std::cout << "~~~~~~~~~~~~~~~~~" << std::endl;
-    return (404);
-  }
-
-
-  std::cout << "**********\n" << file_path << "\n**********" << std::endl;
-
 
   response_message_stream << "HTTP/1.1 200 OK" << CRLF;
   response_status = 200;
@@ -288,10 +193,11 @@ int do_get(std::string &response_message_str,
   reading_file.open(file_path.c_str());
   while (std::getline(reading_file, reading_line_buf))
     response_message_stream << reading_line_buf << '\n';
-  
+
   response_message_str = response_message_stream.str();
   return response_status;
 }
+
 
 /**
  *
