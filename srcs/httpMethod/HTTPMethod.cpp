@@ -191,7 +191,13 @@ int do_get(std::string &response_message_str,
         return (302);
       }
       std::string autoIndexFilePath = tmpFilePath.substr(tmpFilePath.find_last_of("/"));
-      std::set<std::string> dirList = ft::CreateDirectoryList(tmpFilePath);
+      std::set<std::string> dirList;
+      try {
+        dirList = ft::CreateDirectoryList(tmpFilePath);
+      } catch(const std::exception& e) {
+        response_message_str = CreateErrorResponse(500, err_pages, allow_method);
+        return (500);
+      }
       std::size_t i = 0;
       int flag = 0;
       while (i < tmpFilePath.length() && flag == 0) {
