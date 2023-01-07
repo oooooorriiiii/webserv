@@ -27,7 +27,8 @@ int do_get(std::string &response_message_str,
             const std::string &file_path,
             const ServerConfig::err_page_map &err_pages,
             const std::string &connection,
-            bool autoindex);
+            bool autoindex,
+            const std::string alias);
 
 int do_delete(std::string &response_message_str,
             const std::string &file_path,

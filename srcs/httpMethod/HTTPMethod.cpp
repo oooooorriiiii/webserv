@@ -151,7 +151,8 @@ int do_get(std::string &response_message_str,
           const std::string &file_path,
           const ServerConfig::err_page_map &err_pages,
           const std::string &connection,
-          bool autoindex) {
+          bool autoindex,
+          const std::string alias) {
   int response_status;
   std::stringstream response_message_stream;
   std::stringstream body_stream;
@@ -171,9 +172,38 @@ int do_get(std::string &response_message_str,
         body_stream << reading_line_buf << '\n';
       body = body_stream.str();
     } else if (S_ISDIR(st.st_mode) && autoindex) {
-      std::cout << "file_path: " << file_path << std::endl; //debug
-      //body = render_http(file_path);
-      body = "This will be direcity list :)";
+      std::string tmpFilePath = file_path;
+      // when file path not end "/", do redirect to "PATH/"
+      if (tmpFilePath[tmpFilePath.size() - 1] != '/') {
+        tmpFilePath = tmpFilePath + "/";
+        std::string body = CreateSimpleResponseBody(GetResponseLine(302));
+        std::size_t i = 0;
+        int flag = 0;
+        while (i < tmpFilePath.length() && flag == 0) {
+          if (tmpFilePath[i] != alias[i])
+            flag = 1;
+          i++;
+        }
+        std::string autoIndexRedirectPath = tmpFilePath.substr(i);
+        response_message_str = CreateRedirectResponse(302, autoIndexRedirectPath);
+        return (302);
+      }
+      std::string autoIndexFilePath = tmpFilePath.substr(tmpFilePath.find_last_of("/"));
+      std::set<std::string> dirList = ft::CreateDirectoryList(tmpFilePath);
+      std::size_t i = 0;
+      int flag = 0;
+      while (i < tmpFilePath.length() && flag == 0) {
+        if (tmpFilePath[i] != alias[i])
+          flag = 1;
+        i++;
+      }
+      std::string autoIndexTitlePath = tmpFilePath.substr(i);
+      body_stream << "<h1>Index of /" << autoIndexTitlePath << "</h1>" << CRLF;
+      body_stream << "<hr>" << CRLF;
+      for (std::set<std::string>::iterator it = dirList.begin(); it != dirList.end(); it++) {
+        body_stream << "\t\t<a href='." << autoIndexFilePath << *it << "'>" << *it << "</a><br>" << CRLF;
+      }
+      body = body_stream.str();
     } else {
       response_message_str = CreateErrorResponse(403, err_pages);
       return (403); 

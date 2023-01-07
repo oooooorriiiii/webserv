@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html>
+	<h1>Welcome to inception foo location!</h1>
+	<h2>FileName: </h2>
+	<script>
+		var str = window.location.href.split('/').pop();
+		document.write(str);
+	</script>
+</html>

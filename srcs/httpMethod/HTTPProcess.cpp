@@ -80,7 +80,7 @@ std::string http_process(ft::ServerChild& server_child) {
                   query_string_, err_pages);
     } else {
       ret = do_get(response_message_str, plane_filepath, err_pages,
-                  connection, autoindex); 
+                  connection, autoindex, kLocationAlias); 
     }
   } else if (kRequestMethod == "PUT") {
     ret = do_put(response_message_str, plane_filepath, kHttpBody,
