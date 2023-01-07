@@ -205,9 +205,9 @@ namespace ft
 			std::cout << *it << " " << std::endl;
 		std::cout << std::endl;
 		if (valid_methods.find(method) == end) {
-			// 403 if known method is not in locConf 'allowed_method'
+			// 405 if known method is not in locConf 'allowed_method'
 			if (method == "PUT" || method == "GET" || method == "DELETE" || method == "POST")
-				throw_(405, "Not allowed");
+				throw_(405, "Method Not allowed");
 			// 501 if method is completely unkown
             throw_(501, "Not Implemented - invalid request method");
         }
