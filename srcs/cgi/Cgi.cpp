@@ -229,7 +229,7 @@ void Cgi::Execute() {
   int status;
   waitpid(pid, &status, 0);
 
-  if (WEXITSTATUS(status) != 0) {
+  if (WEXITSTATUS(status) != 0 || WIFSIGNALED(status)) {
     std::cerr << "The child process exited with an error" << std::endl;
     close(child_socket);
     close(parent_socket);
