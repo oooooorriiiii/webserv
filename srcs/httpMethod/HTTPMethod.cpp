@@ -329,19 +329,55 @@ int do_CGI(std::string &response_message_str,
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateErrorResponse(404, err_pages, allow_method);
-    return (404);
+    if (!S_ISREG(st.st_mode)) {
+      response_message_str = CreateErrorResponse(400, err_pages, allow_method);
+      return (400); 
+    } else {
+      if (errno == ENOENT) {
+        response_message_str = CreateErrorResponse(404, err_pages, allow_method);
+        return (404);
+      } else if (errno == EACCES) {
+        std::cout << "This should no be happening\n";
+        response_message_str = CreateErrorResponse(403, err_pages, allow_method);
+        return (403); 
+      } else {
+        response_message_str = CreateErrorResponse(500, err_pages, allow_method);
+        return (500); 
+      }
+    }
+  }
+  if (st.st_mode & S_IXUSR) {
+    std::cout << "You have execute permission" << std::endl;
+  } else {
+    response_message_str = CreateErrorResponse(403, err_pages, allow_method);
+    return (403); 
+    std::cout << "You do not have execute permission" << std::endl;
   }
 
   /*
    * If the file exists, assign the file name to script_name_.
    */
+
   std::string script_name;
   std::size_t last_slash_pos = file_path.find_last_of('/');
   if (last_slash_pos != std::string::npos) {
     script_name = file_path.substr(last_slash_pos + 1);
   } else {
     script_name = file_path;
+  }
+
+  std::string ext = server_child.Get_location_config().getCgiExtension().first;
+  std::size_t script_ext_i = file_path.find_last_of('.');
+  if (script_ext_i == std::string::npos) {
+    response_message_str = CreateErrorResponse(501, err_pages, allow_method);
+    return (501);
+  } else {
+    std::string tmp_ext = file_path.substr(script_ext_i);
+    std::cout << "FOUDN EXT: " << tmp_ext << std::endl;
+    if (tmp_ext != ext) {
+      response_message_str = CreateErrorResponse(501, err_pages, allow_method);
+      return (501);
+    }
   }
 
   /*
