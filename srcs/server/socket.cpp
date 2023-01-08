@@ -142,13 +142,7 @@ namespace ft
 		for (size_t i = 0; poll_rslt > 0 && i < poll_fd_vec_.size(); ++i)
 		{
 			struct pollfd& client = poll_fd_vec_[i];
-			if ((client.revents & POLLERR) == POLLERR)
-			{
-				std::cerr << "POLLERR: " << client.fd << std::endl;	
-				close_fd_(client.fd, i);
-				throw closedConnection(client.fd);
-			}
-			else if ((client.revents & POLLHUP) == POLLHUP)
+			if ((client.revents & POLLHUP) == POLLHUP)
 			{
 				std::cerr << "POLLHUP: " << client.fd << std::endl;	
 				// because the fd pipe for cgi is closed already,
@@ -159,13 +153,7 @@ namespace ft
 				}
 				close_fd_(client.fd, i);
 				throw closedConnection(client.fd);
-			}
-			else if ((client.revents & POLLRDHUP) == POLLRDHUP)
-			{
-				std::cerr << "POLLRDHUP: " << client.fd << std::endl;
-				close_fd_(client.fd, i);	
-				throw closedConnection(client.fd);
-			}
+			}	
 			else if ((client.revents & POLLIN) == POLLIN)
 			{
 				client.revents = 0;
@@ -208,6 +196,12 @@ namespace ft
 					client.events = POLLIN;
 				}
 				last_recieve_time_map_[client.fd] = time(NULL);
+			}
+			else if (client.revents != 0)
+			{
+				std::cout << "client: " << client.fd << " - re: " << client.revents << std::endl;
+				close_fd_(client.fd, i);
+				throw closedConnection(client.fd);
 			}
 		}
 		// throw recieveMsgException();	// pollにタイムアウトを設定するので除外
