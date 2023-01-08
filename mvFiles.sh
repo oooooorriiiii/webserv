@@ -3,4 +3,5 @@
 sudo rm /etc/nginx/conf.d/*.conf
 sudo cp config/nginxInception.conf /etc/nginx/conf.d/
 sudo rm -rf /var/www/inception_server
-sudo cp -R ./var/www/inception_server /var/www/
+sudo rm -rf /var/www/webserv
+sudo cp -R ./var/www/webserv /var/www/

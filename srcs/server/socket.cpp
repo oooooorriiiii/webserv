@@ -179,9 +179,8 @@ namespace ft
 					int connection = accept(client.fd, NULL, NULL);
 					if (connection == -1)
 						throw NoRecieveMsg();
-
-					register_new_client_(connection, false);
 					fd_to_port_map_[connection] = fd_to_port_map_[client.fd];
+					register_new_client_(connection, false);
 					try {
 						set_nonblock_(connection);
 					} catch (const std::exception& e) {
