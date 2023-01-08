@@ -22,7 +22,9 @@ std::string CreateSimpleResponseBody(const std::string& err);
 std::string FileContentToStr(const std::string& path);
 
 std::string CreateRedirectResponse(int status_code, const std::string& location);
-std::string CreateErrorResponse(int status_code, const ServerConfig::err_page_map& err_pages);
+std::string CreateErrorResponse(int status_code,
+                            const ServerConfig::err_page_map& err_pages,
+                            const std::set<std::string> &allow_methods);
 
 
 
