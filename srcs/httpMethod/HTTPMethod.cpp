@@ -319,7 +319,7 @@ int do_CGI(std::string &response_message_str,
            const ServerConfig::err_page_map &err_pages,
            const std::set<std::string> &allow_method) {
   std::stringstream response_message_stream;
-
+  std::cerr << "HELLO\n";
   /*
    * Check to exist file
    * FIXME: GETと同じことをしている．
@@ -329,7 +329,8 @@ int do_CGI(std::string &response_message_str,
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    if (!S_ISREG(st.st_mode)) {
+    if (ret_val == 0 && !S_ISREG(st.st_mode)) {
+      std::cout << "this is not a regular fil\n";
       response_message_str = CreateErrorResponse(400, err_pages, allow_method);
       return (400); 
     } else {
@@ -337,7 +338,7 @@ int do_CGI(std::string &response_message_str,
         response_message_str = CreateErrorResponse(404, err_pages, allow_method);
         return (404);
       } else if (errno == EACCES) {
-        std::cout << "This should no be happening\n";
+        std::cerr << "This should no be happening\n";
         response_message_str = CreateErrorResponse(403, err_pages, allow_method);
         return (403); 
       } else {
@@ -346,12 +347,12 @@ int do_CGI(std::string &response_message_str,
       }
     }
   }
-  if (st.st_mode & S_IXUSR) {
+  if ((st.st_mode & S_IXUSR) == S_IXUSR) {
     std::cout << "You have execute permission" << std::endl;
   } else {
+    std::cout << "You do not have execute permission" << std::endl;
     response_message_str = CreateErrorResponse(403, err_pages, allow_method);
     return (403); 
-    std::cout << "You do not have execute permission" << std::endl;
   }
 
   /*
