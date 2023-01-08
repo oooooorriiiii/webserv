@@ -209,6 +209,8 @@ void ConfigParser::setConfigServer(std::vector<std::string> line)
 	}
 	else if (line[0] == "}")
 	{
+		if (this->server_config.getListen() == 0)
+			throw std::runtime_error("Error: server does not have listen directive\n");			
 		this->config.addServerConfig(this->server_config);
 		this->server_config = ServerConfig();
 		this->nowBlock = ROOT;

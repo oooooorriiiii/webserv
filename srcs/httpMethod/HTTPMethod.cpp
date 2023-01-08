@@ -370,14 +370,15 @@ int do_CGI(std::string &response_message_str,
   std::string ext = server_child.Get_location_config().getCgiExtension().first;
   std::size_t script_ext_i = file_path.find_last_of('.');
   if (script_ext_i == std::string::npos) {
-    response_message_str = CreateErrorResponse(501, err_pages, allow_method);
-    return (501);
+    response_message_str = CreateErrorResponse(500, err_pages, allow_method);
+    return (500);
   } else {
     std::string tmp_ext = file_path.substr(script_ext_i);
-    std::cout << "FOUDN EXT: " << tmp_ext << std::endl;
+    std::cout << "FOUND EXT: " << tmp_ext << std::endl;
     if (tmp_ext != ext) {
-      response_message_str = CreateErrorResponse(501, err_pages, allow_method);
-      return (501);
+      std::cout << "ext does not match\n";
+      response_message_str = CreateErrorResponse(500, err_pages, allow_method);
+      return (500);
     }
   }
 
