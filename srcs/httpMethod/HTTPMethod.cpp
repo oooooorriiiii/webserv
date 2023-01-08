@@ -319,7 +319,7 @@ int do_CGI(std::string &response_message_str,
            const ServerConfig::err_page_map &err_pages,
            const std::set<std::string> &allow_method) {
   std::stringstream response_message_stream;
-
+  std::cerr << "HELLO\n";
   /*
    * Check to exist file
    * FIXME: GETと同じことをしている．
@@ -329,19 +329,57 @@ int do_CGI(std::string &response_message_str,
 
   ret_val = stat(file_path.c_str(), &st);
   if (ret_val < 0 || !S_ISREG(st.st_mode)) {
-    response_message_str = CreateErrorResponse(404, err_pages, allow_method);
-    return (404);
+    if (ret_val == 0 && !S_ISREG(st.st_mode)) {
+      std::cout << "this is not a regular fil\n";
+      response_message_str = CreateErrorResponse(400, err_pages, allow_method);
+      return (400); 
+    } else {
+      if (errno == ENOENT) {
+        response_message_str = CreateErrorResponse(404, err_pages, allow_method);
+        return (404);
+      } else if (errno == EACCES) {
+        std::cerr << "This should no be happening\n";
+        response_message_str = CreateErrorResponse(403, err_pages, allow_method);
+        return (403); 
+      } else {
+        response_message_str = CreateErrorResponse(500, err_pages, allow_method);
+        return (500); 
+      }
+    }
+  }
+  if ((st.st_mode & S_IXUSR) == S_IXUSR) {
+    std::cout << "You have execute permission" << std::endl;
+  } else {
+    std::cout << "You do not have execute permission" << std::endl;
+    response_message_str = CreateErrorResponse(403, err_pages, allow_method);
+    return (403); 
   }
 
   /*
    * If the file exists, assign the file name to script_name_.
    */
+
   std::string script_name;
   std::size_t last_slash_pos = file_path.find_last_of('/');
   if (last_slash_pos != std::string::npos) {
     script_name = file_path.substr(last_slash_pos + 1);
   } else {
     script_name = file_path;
+  }
+
+  std::string ext = server_child.Get_location_config().getCgiExtension().first;
+  std::size_t script_ext_i = file_path.find_last_of('.');
+  if (script_ext_i == std::string::npos) {
+    response_message_str = CreateErrorResponse(500, err_pages, allow_method);
+    return (500);
+  } else {
+    std::string tmp_ext = file_path.substr(script_ext_i);
+    std::cout << "FOUND EXT: " << tmp_ext << std::endl;
+    if (tmp_ext != ext) {
+      std::cout << "ext does not match\n";
+      response_message_str = CreateErrorResponse(500, err_pages, allow_method);
+      return (500);
+    }
   }
 
   /*
